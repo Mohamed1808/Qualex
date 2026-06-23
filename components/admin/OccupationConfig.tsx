@@ -127,12 +127,12 @@ export default function OccupationConfig({ occupations: initial }: OccupationCon
             onChange={(e) => setNewLabel(e.target.value)}
             placeholder="e.g. Pharmacist"
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            className="flex-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+            className="flex-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
           />
           <button
             onClick={handleAdd}
             disabled={adding || !newLabel.trim()}
-            className="bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            className="bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
           >
             {adding ? '…' : 'Add'}
           </button>

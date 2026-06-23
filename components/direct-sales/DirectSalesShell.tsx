@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import type { Profile, DailyAttendance } from '@/types/database'
 import BreakButton from '@/components/shared/BreakButton'
 import NotificationBell from '@/components/shared/NotificationBell'
+import BrandLogo from '@/components/shared/BrandLogo'
 import { format } from 'date-fns'
 import { toZonedTime } from 'date-fns-tz'
 import { useAttendance } from '@/hooks/useAttendance'
@@ -98,14 +99,18 @@ export default function DirectSalesShell({
       >
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-3.5 py-4 border-b border-[#2a2a2a] h-14 overflow-hidden">
-          <div
-            className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: accentColor }}
-          >
-            <span className="text-white font-bold text-xs">Q</span>
-          </div>
-          {expanded && (
-            <span className="text-white font-semibold text-sm whitespace-nowrap">Qualex DS</span>
+          {expanded ? (
+            <>
+              <BrandLogo variant="full" height={26} />
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap"
+                style={{ color: accentColor, backgroundColor: `${accentColor}1a` }}
+              >
+                DS
+              </span>
+            </>
+          ) : (
+            <BrandLogo variant="mark" height={28} className="flex-shrink-0" />
           )}
         </div>
 

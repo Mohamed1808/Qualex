@@ -74,7 +74,7 @@ export default async function TSAnalyticsPage() {
         </div>
         <div className="grid grid-cols-4 gap-4">
           {[
-            { label: 'Total Leads', value: totalLeads.toLocaleString(), color: '#3B82F6' },
+            { label: 'Total Leads', value: totalLeads.toLocaleString(), color: '#5757e6' },
             { label: 'Qualified', value: totalQualified.toLocaleString(), color: '#14B8A6' },
             { label: 'Unqualified', value: totalUnqualified.toLocaleString(), color: '#F26161' },
             { label: 'Qualification Rate', value: `${qualRate}%`, color: '#F59E0B' },
@@ -217,7 +217,7 @@ export default async function TSAnalyticsPage() {
       {/* KPI Row */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: 'Total Leads', value: totalLeads.toLocaleString(), color: '#3B82F6' },
+          { label: 'Total Leads', value: totalLeads.toLocaleString(), color: '#5757e6' },
           { label: 'Qualified', value: totalQualified.toLocaleString(), color: '#14B8A6' },
           { label: 'Unqualified', value: totalUnqualified.toLocaleString(), color: '#F26161' },
           { label: 'Qualification Rate', value: `${qualRate}%`, color: '#F59E0B' },

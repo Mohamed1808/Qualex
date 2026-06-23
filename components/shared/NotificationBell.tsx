@@ -127,7 +127,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-xs text-[#3B82F6] hover:text-[#60A5FA] transition-colors"
+                className="text-xs text-[#5757e6] hover:text-[#7d7dee] transition-colors"
               >
                 Mark all read
               </button>
@@ -165,7 +165,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                     </p>
                   </div>
                   {!notif.is_read && (
-                    <span className="w-2 h-2 bg-[#3B82F6] rounded-full flex-shrink-0 mt-1" />
+                    <span className="w-2 h-2 bg-[#5757e6] rounded-full flex-shrink-0 mt-1" />
                   )}
                 </div>
               </button>

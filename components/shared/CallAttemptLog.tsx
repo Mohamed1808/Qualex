@@ -165,7 +165,7 @@ export default function CallAttemptLog({ leadId, stage, attempts, onUpdate }: Ca
           {logging === null ? (
             <button
               onClick={() => setLogging(nextAttemptNumber)}
-              className="w-full text-sm text-[#3B82F6] border border-[#3B82F6]/30 bg-[#3B82F6]/5 hover:bg-[#3B82F6]/10 rounded-lg px-3 py-2 transition-colors font-medium"
+              className="w-full text-sm text-[#5757e6] border border-[#5757e6]/30 bg-[#5757e6]/5 hover:bg-[#5757e6]/10 rounded-lg px-3 py-2 transition-colors font-medium"
             >
               + Log Attempt {nextAttemptNumber}
             </button>
@@ -179,7 +179,7 @@ export default function CallAttemptLog({ leadId, stage, attempts, onUpdate }: Ca
                 <select
                   value={selectedOutcome}
                   onChange={(e) => setSelectedOutcome(e.target.value as CallOutcome)}
-                  className="w-full bg-[#0f0f0f] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+                  className="w-full bg-[#0f0f0f] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
                 >
                   <option value="answered">Answered</option>
                   <option value="no_answer">No Answer</option>
@@ -195,7 +195,7 @@ export default function CallAttemptLog({ leadId, stage, attempts, onUpdate }: Ca
                     type="datetime-local"
                     value={callbackAt}
                     onChange={(e) => setCallbackAt(e.target.value)}
-                    className="w-full bg-[#0f0f0f] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+                    className="w-full bg-[#0f0f0f] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
                   />
                 </div>
               )}
@@ -207,7 +207,7 @@ export default function CallAttemptLog({ leadId, stage, attempts, onUpdate }: Ca
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={2}
-                  className="w-full bg-[#0f0f0f] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+                  className="w-full bg-[#0f0f0f] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
                   placeholder="Add notes…"
                 />
               </div>
@@ -216,7 +216,7 @@ export default function CallAttemptLog({ leadId, stage, attempts, onUpdate }: Ca
                 <button
                   onClick={handleLogCall}
                   disabled={submitting}
-                  className="flex-1 bg-[#3B82F6] hover:bg-[#2563EB] disabled:opacity-50 text-white text-sm font-medium rounded-lg px-3 py-2 transition-colors"
+                  className="flex-1 bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white text-sm font-medium rounded-lg px-3 py-2 transition-colors"
                 >
                   {submitting ? 'Saving…' : 'Save Attempt'}
                 </button>

@@ -43,7 +43,7 @@ export default function AgentPerformanceTable({ data, teamType }: AgentPerforman
     return sortDir === 'asc' ? (av as number) - (bv as number) : (bv as number) - (av as number)
   })
 
-  const accentColor = teamType === 'telesales' ? '#3B82F6' : '#14B8A6'
+  const accentColor = teamType === 'telesales' ? '#5757e6' : '#14B8A6'
 
   const columns: { key: SortKey; label: string }[] = [
     { key: 'agentName', label: 'Agent' },

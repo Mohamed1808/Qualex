@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { Profile } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
+import BrandLogo from '@/components/shared/BrandLogo'
 
 interface AdminShellProps {
   profile: Profile
@@ -33,10 +34,10 @@ export default function AdminShell({ profile, children }: AdminShellProps) {
       {/* Sidebar */}
       <aside className="w-56 flex-shrink-0 flex flex-col bg-[#161616] border-r border-[#2a2a2a]">
         <div className="flex items-center gap-2.5 px-4 py-4 border-b border-[#2a2a2a] h-14">
-          <div className="w-7 h-7 bg-[#7C3AED] rounded-md flex items-center justify-center">
-            <span className="text-white font-bold text-xs">A</span>
-          </div>
-          <span className="text-white font-semibold text-sm">Admin Panel</span>
+          <BrandLogo variant="full" height={26} />
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#5757e6]/15 text-[#5757e6] whitespace-nowrap">
+            ADMIN
+          </span>
         </div>
 
         <nav className="flex-1 py-3 space-y-0.5">
@@ -48,7 +49,7 @@ export default function AdminShell({ profile, children }: AdminShellProps) {
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg transition-colors text-sm ${
                   isActive
-                    ? 'bg-[#7C3AED]/15 text-[#7C3AED]'
+                    ? 'bg-[#5757e6]/15 text-[#5757e6]'
                     : 'text-[#6B7280] hover:text-white hover:bg-[#1c1c22]'
                 }`}
               >
@@ -61,8 +62,8 @@ export default function AdminShell({ profile, children }: AdminShellProps) {
 
         <div className="border-t border-[#2a2a2a] p-3">
           <div className="flex items-center gap-2 px-2 mb-2">
-            <div className="w-6 h-6 rounded-full bg-[#7C3AED]/20 flex items-center justify-center">
-              <span className="text-[#7C3AED] text-xs font-bold">
+            <div className="w-6 h-6 rounded-full bg-[#5757e6]/20 flex items-center justify-center">
+              <span className="text-[#5757e6] text-xs font-bold">
                 {profile.full_name.charAt(0)}
               </span>
             </div>

@@ -67,7 +67,7 @@ export default async function DSAnalyticsPage() {
         </div>
         <div className="grid grid-cols-4 gap-4">
           {[
-            { label: 'Total Leads', value: totalLeads.toLocaleString(), color: '#3B82F6' },
+            { label: 'Total Leads', value: totalLeads.toLocaleString(), color: '#5757e6' },
             { label: 'TS Qualified', value: totalQualified.toLocaleString(), color: '#14B8A6' },
             { label: 'Approved', value: totalApproved.toLocaleString(), color: '#22C55E' },
             { label: 'Conversion Rate', value: `${overallConversion}%`, color: '#F59E0B' },
@@ -217,7 +217,7 @@ export default async function DSAnalyticsPage() {
       {/* KPI Row */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: 'Total Leads', value: totalLeads.toLocaleString(), color: '#3B82F6' },
+          { label: 'Total Leads', value: totalLeads.toLocaleString(), color: '#5757e6' },
           { label: 'TS Qualified', value: totalQualified.toLocaleString(), color: '#14B8A6' },
           { label: 'Approved', value: totalApproved.toLocaleString(), color: '#22C55E' },
           { label: 'Conversion Rate', value: `${overallConversion}%`, color: '#F59E0B' },

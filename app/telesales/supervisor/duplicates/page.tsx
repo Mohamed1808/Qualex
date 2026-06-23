@@ -43,7 +43,7 @@ export default async function TSDuplicatesPage() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
+                        <span className="w-2 h-2 rounded-full bg-[#5757e6]" />
                         <ChannelBadge channel={lead.channel} />
                         <span className="text-xs text-[#6B7280]">Original</span>
                       </div>
@@ -155,7 +155,7 @@ export default async function TSDuplicatesPage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
+                      <span className="w-2 h-2 rounded-full bg-[#5757e6]" />
                       <ChannelBadge channel={lead.channel} />
                       <span className="text-xs text-[#6B7280]">Original</span>
                     </div>

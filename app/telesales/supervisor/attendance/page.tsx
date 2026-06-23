@@ -24,7 +24,7 @@ export default async function TSAttendancePage() {
         </div>
         <div className="grid grid-cols-4 gap-4 mb-6">
           {[
-            { label: 'Total Agents', value: agents.length, color: '#3B82F6' },
+            { label: 'Total Agents', value: agents.length, color: '#5757e6' },
             { label: 'Checked In', value: attendance.filter((a) => a.checked_in && !a.checked_out).length, color: '#22C55E' },
             { label: 'On Break', value: attendance.filter((a) => a.on_break).length, color: '#F59E0B' },
             { label: 'Checked Out', value: attendance.filter((a) => a.checked_out).length, color: '#6B7280' },
@@ -114,7 +114,7 @@ export default async function TSAttendancePage() {
           {
             label: 'Total Agents',
             value: agents?.length ?? 0,
-            color: '#3B82F6',
+            color: '#5757e6',
           },
           {
             label: 'Checked In',

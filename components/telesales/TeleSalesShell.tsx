@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import type { Profile, DailyAttendance } from '@/types/database'
 import BreakButton from '@/components/shared/BreakButton'
 import NotificationBell from '@/components/shared/NotificationBell'
+import BrandLogo from '@/components/shared/BrandLogo'
 import { format } from 'date-fns'
 import { toZonedTime } from 'date-fns-tz'
 import { useAttendance } from '@/hooks/useAttendance'
@@ -89,11 +90,10 @@ export default function TeleSalesShell({ profile, initialAttendance, children }:
       >
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-3.5 py-4 border-b border-[#2a2a2a] h-14 overflow-hidden">
-          <div className="w-7 h-7 bg-[#3B82F6] rounded-md flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-xs">Q</span>
-          </div>
-          {expanded && (
-            <span className="text-white font-semibold text-sm whitespace-nowrap">Qualex</span>
+          {expanded ? (
+            <BrandLogo variant="full" height={26} />
+          ) : (
+            <BrandLogo variant="mark" height={28} className="flex-shrink-0" />
           )}
         </div>
 
@@ -107,7 +107,7 @@ export default function TeleSalesShell({ profile, initialAttendance, children }:
                 href={item.href}
                 className={`flex items-center gap-3 px-3.5 py-2.5 transition-colors mx-1.5 rounded-lg ${
                   isActive
-                    ? 'bg-[#3B82F6]/15 text-[#3B82F6]'
+                    ? 'bg-[#5757e6]/15 text-[#5757e6]'
                     : 'text-[#6B7280] hover:text-white hover:bg-[#1c1c22]'
                 }`}
               >
@@ -155,8 +155,8 @@ export default function TeleSalesShell({ profile, initialAttendance, children }:
         {/* Header */}
         <header className="flex items-center justify-between px-6 h-14 border-b border-[#2a2a2a] bg-[#161616] flex-shrink-0 gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-7 h-7 rounded-full bg-[#3B82F6]/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-[#3B82F6] text-xs font-bold">
+            <div className="w-7 h-7 rounded-full bg-[#5757e6]/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-[#5757e6] text-xs font-bold">
                 {profile.full_name.charAt(0).toUpperCase()}
               </span>
             </div>

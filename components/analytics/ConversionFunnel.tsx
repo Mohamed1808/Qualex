@@ -22,8 +22,8 @@ interface ConversionFunnelProps {
 
 export default function ConversionFunnel({ data }: ConversionFunnelProps) {
   const funnelData = [
-    { name: 'Captured', value: data.captured, fill: '#3B82F6' },
-    { name: 'TS Reached', value: data.tsReached, fill: '#60A5FA' },
+    { name: 'Captured', value: data.captured, fill: '#5757e6' },
+    { name: 'TS Reached', value: data.tsReached, fill: '#7d7dee' },
     { name: 'TS Qualified', value: data.tsQualified, fill: '#14B8A6' },
     { name: 'DS Reached', value: data.dsReached, fill: '#2DD4BF' },
     { name: 'DS Qualified', value: data.dsQualified, fill: '#22C55E' },

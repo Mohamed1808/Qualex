@@ -199,7 +199,7 @@ export default function LeadImport() {
             a.click()
             URL.revokeObjectURL(url)
           }}
-          className="text-xs text-[#3B82F6] hover:text-[#60A5FA] transition-colors flex items-center gap-1"
+          className="text-xs text-[#5757e6] hover:text-[#7d7dee] transition-colors flex items-center gap-1"
         >
           ⬇ Download Template
         </button>
@@ -214,8 +214,8 @@ export default function LeadImport() {
           onClick={() => fileRef.current?.click()}
           className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
             isDragging
-              ? 'border-[#3B82F6] bg-[#3B82F6]/5'
-              : 'border-[#2a2a2a] hover:border-[#3B82F6]/50 hover:bg-[#1c1c22]'
+              ? 'border-[#5757e6] bg-[#5757e6]/5'
+              : 'border-[#2a2a2a] hover:border-[#5757e6]/50 hover:bg-[#1c1c22]'
           }`}
         >
           <div className="text-3xl mb-2">📂</div>
@@ -236,7 +236,7 @@ export default function LeadImport() {
         <div>
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs text-[#9CA3AF]">
-              <span className="text-white font-medium">{rows.length} leads</span> ready to import from <span className="text-[#3B82F6]">{fileName}</span>
+              <span className="text-white font-medium">{rows.length} leads</span> ready to import from <span className="text-[#5757e6]">{fileName}</span>
             </p>
             <button onClick={reset} className="text-xs text-[#6B7280] hover:text-white transition-colors">✕ Clear</button>
           </div>
@@ -270,7 +270,7 @@ export default function LeadImport() {
           <button
             onClick={startImport}
             disabled={importing}
-            className="w-full bg-[#3B82F6] hover:bg-[#2563EB] disabled:opacity-50 text-white font-semibold text-sm rounded-lg py-3 transition-colors"
+            className="w-full bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white font-semibold text-sm rounded-lg py-3 transition-colors"
           >
             {importing ? `Importing… (${results.length}/${rows.length})` : `⬆ Import ${rows.length} Leads`}
           </button>
@@ -282,7 +282,7 @@ export default function LeadImport() {
         <div className="mt-3">
           <div className="w-full bg-[#2a2a2a] rounded-full h-1.5">
             <div
-              className="bg-[#3B82F6] h-1.5 rounded-full transition-all duration-300"
+              className="bg-[#5757e6] h-1.5 rounded-full transition-all duration-300"
               style={{ width: `${(results.length / (rows.length + results.length)) * 100}%` }}
             />
           </div>

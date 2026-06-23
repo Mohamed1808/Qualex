@@ -37,11 +37,11 @@ const ROLE_LABELS: Record<UserRole, string> = {
 }
 
 const ROLE_COLORS: Record<UserRole, string> = {
-  telesales_agent: '#3B82F6',
-  telesales_supervisor: '#60A5FA',
+  telesales_agent: '#5757e6',
+  telesales_supervisor: '#7d7dee',
   direct_sales_agent: '#14B8A6',
   direct_sales_supervisor: '#2DD4BF',
-  admin: '#7C3AED',
+  admin: '#5757e6',
 }
 
 export default function UserManagement({ profiles }: UserManagementProps) {
@@ -126,7 +126,7 @@ export default function UserManagement({ profiles }: UserManagementProps) {
         </div>
         <button
           onClick={() => setShowCreate(!showCreate)}
-          className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          className="bg-[#5757e6] hover:bg-[#4444cc] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
         >
           {showCreate ? 'Cancel' : '+ New User'}
         </button>
@@ -134,7 +134,7 @@ export default function UserManagement({ profiles }: UserManagementProps) {
 
       {/* Create User Form */}
       {showCreate && (
-        <div className="bg-[#161616] border border-[#7C3AED]/30 rounded-xl p-5 mb-6">
+        <div className="bg-[#161616] border border-[#5757e6]/30 rounded-xl p-5 mb-6">
           <h2 className="text-sm font-semibold text-white mb-4">Create New User</h2>
           <form onSubmit={handleSubmit(onCreateUser)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -144,7 +144,7 @@ export default function UserManagement({ profiles }: UserManagementProps) {
                   {...register('full_name')}
                   type="text"
                   placeholder="John Doe"
-                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
                 />
                 {errors.full_name && (
                   <p className="text-[10px] text-[#F26161] mt-1">{errors.full_name.message}</p>
@@ -156,7 +156,7 @@ export default function UserManagement({ profiles }: UserManagementProps) {
                   {...register('email')}
                   type="email"
                   placeholder="user@company.com"
-                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
                 />
                 {errors.email && (
                   <p className="text-[10px] text-[#F26161] mt-1">{errors.email.message}</p>
@@ -168,7 +168,7 @@ export default function UserManagement({ profiles }: UserManagementProps) {
                   {...register('password')}
                   type="password"
                   placeholder="Min. 8 characters"
-                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
                 />
                 {errors.password && (
                   <p className="text-[10px] text-[#F26161] mt-1">{errors.password.message}</p>
@@ -178,7 +178,7 @@ export default function UserManagement({ profiles }: UserManagementProps) {
                 <label className="text-xs text-[#9CA3AF] mb-1 block">Role</label>
                 <select
                   {...register('role')}
-                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
                 >
                   {Object.entries(ROLE_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>
@@ -191,7 +191,7 @@ export default function UserManagement({ profiles }: UserManagementProps) {
             <button
               type="submit"
               disabled={creating}
-              className="bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-50 text-white text-sm font-medium px-6 py-2 rounded-lg transition-colors"
+              className="bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white text-sm font-medium px-6 py-2 rounded-lg transition-colors"
             >
               {creating ? 'Creating…' : 'Create User'}
             </button>

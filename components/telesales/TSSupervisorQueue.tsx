@@ -89,7 +89,7 @@ export default function TSSupervisorQueue({ initialLeads, agents }: TSSupervisor
             onClick={() => setTab(t.key)}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
               tab === t.key
-                ? 'text-[#3B82F6] border-[#3B82F6]'
+                ? 'text-[#5757e6] border-[#5757e6]'
                 : 'text-[#6B7280] border-transparent hover:text-white'
             }`}
           >
@@ -105,12 +105,12 @@ export default function TSSupervisorQueue({ initialLeads, agents }: TSSupervisor
           placeholder="Search by name or phone…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+          className="flex-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
         />
         <select
           value={selectedChannel}
           onChange={(e) => setSelectedChannel(e.target.value)}
-          className="bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+          className="bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
         >
           <option value="">All Channels</option>
           <option value="whatsapp">WhatsApp</option>
@@ -188,7 +188,7 @@ export default function TSSupervisorQueue({ initialLeads, agents }: TSSupervisor
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => router.push(`/telesales/agent/${lead.id}`)}
-                          className="text-xs text-[#3B82F6] hover:underline"
+                          className="text-xs text-[#5757e6] hover:underline"
                         >
                           View
                         </button>
@@ -230,7 +230,7 @@ export default function TSSupervisorQueue({ initialLeads, agents }: TSSupervisor
                         ) : (
                           <button
                             onClick={() => setReassigning(lead.id)}
-                            className="text-xs font-medium text-white bg-[#3B82F6] hover:bg-[#2563EB] px-2.5 py-1 rounded"
+                            className="text-xs font-medium text-white bg-[#5757e6] hover:bg-[#4444cc] px-2.5 py-1 rounded"
                           >
                             Assign →
                           </button>

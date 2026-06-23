@@ -9,6 +9,7 @@ import { z } from 'zod'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import BrandLogo from '@/components/shared/BrandLogo'
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -83,13 +84,10 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-[#3B82F6] rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">Q</span>
-            </div>
-            <span className="text-2xl font-bold text-white tracking-tight">Qualex</span>
+          <div className="flex justify-center mb-3">
+            <BrandLogo variant="full" height={40} />
           </div>
-          <p className="text-[#6B7280] text-sm">Drive Finance Lead Management</p>
+          <p className="text-[#6B7280] text-sm">Qualex · Lead Management</p>
         </div>
 
         {/* Card */}
@@ -108,7 +106,7 @@ export default function LoginPage() {
                 type="email"
                 autoComplete="email"
                 {...register('email')}
-                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white rounded-lg px-3 py-2.5 text-sm placeholder-[#4B5563] focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent transition-all"
+                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white rounded-lg px-3 py-2.5 text-sm placeholder-[#4B5563] focus:outline-none focus:ring-2 focus:ring-[#5757e6] focus:border-transparent transition-all"
                 placeholder="you@example.com"
                 disabled={isLoading}
               />
@@ -127,7 +125,7 @@ export default function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 {...register('password')}
-                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white rounded-lg px-3 py-2.5 text-sm placeholder-[#4B5563] focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent transition-all"
+                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white rounded-lg px-3 py-2.5 text-sm placeholder-[#4B5563] focus:outline-none focus:ring-2 focus:ring-[#5757e6] focus:border-transparent transition-all"
                 placeholder="••••••••"
                 disabled={isLoading}
               />
@@ -137,7 +135,7 @@ export default function LoginPage() {
               <div className="mt-1.5 text-right">
                 <a
                   href="/forgot-password"
-                  className="text-xs text-[#3B82F6] hover:text-[#60A5FA] transition-colors"
+                  className="text-xs text-[#5757e6] hover:text-[#7d7dee] transition-colors"
                 >
                   Forgot password?
                 </a>
@@ -148,7 +146,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-[#3B82F6] hover:bg-[#2563EB] disabled:bg-[#1d4ed8] disabled:opacity-50 text-white font-medium rounded-lg py-2.5 text-sm transition-colors mt-2 flex items-center justify-center gap-2"
+              className="w-full bg-[#5757e6] hover:bg-[#4444cc] disabled:bg-[#1d4ed8] disabled:opacity-50 text-white font-medium rounded-lg py-2.5 text-sm transition-colors mt-2 flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>

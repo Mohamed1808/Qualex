@@ -60,7 +60,7 @@ export default function CreditQueue({ initialLeads }: CreditQueueProps) {
         placeholder="Search by name or phone…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="w-full mb-4 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+        className="w-full mb-4 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
       />
 
       {filtered.length === 0 ? (
@@ -84,7 +84,7 @@ export default function CreditQueue({ initialLeads }: CreditQueueProps) {
                 </div>
                 <button
                   onClick={() => router.push(`/direct-sales/agent/${lead.id}`)}
-                  className="text-xs text-[#7C3AED] hover:underline flex-shrink-0"
+                  className="text-xs text-[#5757e6] hover:underline flex-shrink-0"
                 >
                   View full file →
                 </button>
@@ -124,7 +124,7 @@ export default function CreditQueue({ initialLeads }: CreditQueueProps) {
                   href={lead.id_document_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block text-xs text-[#3B82F6] hover:underline mt-2"
+                  className="inline-block text-xs text-[#5757e6] hover:underline mt-2"
                 >
                   📎 View ID document
                 </a>
@@ -138,7 +138,7 @@ export default function CreditQueue({ initialLeads }: CreditQueueProps) {
                     onChange={(e) => setNote(e.target.value)}
                     placeholder="Decision note (required for rejection)…"
                     rows={2}
-                    className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+                    className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
                   />
                   <div className="flex items-center gap-2 mt-3">
                     <button
@@ -173,7 +173,7 @@ export default function CreditQueue({ initialLeads }: CreditQueueProps) {
                       setActing(lead.id)
                       setNote('')
                     }}
-                    className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors"
+                    className="bg-[#5757e6] hover:bg-[#4444cc] text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors"
                   >
                     Make decision
                   </button>

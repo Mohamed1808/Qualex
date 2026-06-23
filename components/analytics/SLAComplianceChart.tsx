@@ -56,7 +56,7 @@ export default function SLAComplianceChart({ data }: SLAComplianceChartProps) {
           <Line
             type="monotone"
             dataKey="telesales"
-            stroke="#3B82F6"
+            stroke="#5757e6"
             strokeWidth={2}
             dot={false}
             name="Telesales"

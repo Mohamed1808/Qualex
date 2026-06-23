@@ -9,6 +9,7 @@ import { z } from 'zod'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import BrandLogo from '@/components/shared/BrandLogo'
 
 const schema = z
   .object({
@@ -86,13 +87,10 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-[#3B82F6] rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">Q</span>
-            </div>
-            <span className="text-2xl font-bold text-white tracking-tight">Qualex</span>
+          <div className="flex justify-center mb-3">
+            <BrandLogo variant="full" height={40} />
           </div>
-          <p className="text-[#6B7280] text-sm">Drive Finance Lead Management</p>
+          <p className="text-[#6B7280] text-sm">Qualex · Lead Management</p>
         </div>
 
         <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl p-8 shadow-2xl">
@@ -105,7 +103,7 @@ export default function ResetPasswordPage() {
               </p>
               <a
                 href="/forgot-password"
-                className="inline-block mt-6 text-sm text-[#3B82F6] hover:text-[#60A5FA] transition-colors"
+                className="inline-block mt-6 text-sm text-[#5757e6] hover:text-[#7d7dee] transition-colors"
               >
                 Request a new link
               </a>
@@ -127,7 +125,7 @@ export default function ResetPasswordPage() {
                     type="password"
                     autoComplete="new-password"
                     {...register('password')}
-                    className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white rounded-lg px-3 py-2.5 text-sm placeholder-[#4B5563] focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent transition-all"
+                    className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white rounded-lg px-3 py-2.5 text-sm placeholder-[#4B5563] focus:outline-none focus:ring-2 focus:ring-[#5757e6] focus:border-transparent transition-all"
                     placeholder="••••••••"
                     disabled={isLoading || !ready}
                   />
@@ -145,7 +143,7 @@ export default function ResetPasswordPage() {
                     type="password"
                     autoComplete="new-password"
                     {...register('confirm')}
-                    className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white rounded-lg px-3 py-2.5 text-sm placeholder-[#4B5563] focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent transition-all"
+                    className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white rounded-lg px-3 py-2.5 text-sm placeholder-[#4B5563] focus:outline-none focus:ring-2 focus:ring-[#5757e6] focus:border-transparent transition-all"
                     placeholder="••••••••"
                     disabled={isLoading || !ready}
                   />
@@ -157,7 +155,7 @@ export default function ResetPasswordPage() {
                 <button
                   type="submit"
                   disabled={isLoading || !ready}
-                  className="w-full bg-[#3B82F6] hover:bg-[#2563EB] disabled:opacity-50 text-white font-medium rounded-lg py-2.5 text-sm transition-colors mt-2"
+                  className="w-full bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white font-medium rounded-lg py-2.5 text-sm transition-colors mt-2"
                 >
                   {!ready ? 'Verifying link…' : isLoading ? 'Updating…' : 'Update password'}
                 </button>

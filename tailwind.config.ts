@@ -16,7 +16,7 @@ const config: Config = {
         card: "#161616",
         panel: "#1c1c22",
         border: "#2a2a2a",
-        "telesales-accent": "#3B82F6",
+        "telesales-accent": "#5757e6",
         "ds-accent": "#14B8A6",
         "sla-breach": "#F26161",
         qualified: "#22C55E",

@@ -24,7 +24,7 @@ function stageColor(stage: string): string {
   if (stage === 'retired') return '#F59E0B'
   if (['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted'].includes(stage))
     return '#14B8A6'
-  return '#3B82F6'
+  return '#5757e6'
 }
 
 export default function AuditLog({ initialRows }: AuditLogProps) {
@@ -64,12 +64,12 @@ export default function AuditLog({ initialRows }: AuditLogProps) {
           placeholder="Search by lead, phone, or user…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+          className="flex-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
         />
         <select
           value={stageFilter}
           onChange={(e) => setStageFilter(e.target.value)}
-          className="bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+          className="bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
         >
           <option value="">All transitions</option>
           {stages.map((s) => (

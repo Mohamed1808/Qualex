@@ -26,8 +26,10 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <head>
         <title>Qualex — Drive Finance</title>
-        <meta name="description" content="Automotive Finance Lead Management System" />
+        <meta name="description" content="Drive Finance — Automotive Lead Management" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#5757e6" />
+        <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml" />
       </head>
       <body className="bg-[#0f0f0f] text-white antialiased">
         <QueryClientProvider client={queryClient}>

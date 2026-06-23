@@ -20,7 +20,7 @@ export default function LeadCard({ lead, onClick, teamType = 'telesales' }: Lead
     teamType === 'telesales' ? lead.tele_sla_due_at : lead.ds_sla_due_at
 
   const slaStatus = getSLAStatus(slaDueAt, slaBreached)
-  const accentColor = teamType === 'telesales' ? '#3B82F6' : '#14B8A6'
+  const accentColor = teamType === 'telesales' ? '#5757e6' : '#14B8A6'
 
   const borderClass =
     slaStatus === 'breached'

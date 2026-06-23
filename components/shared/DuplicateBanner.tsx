@@ -38,7 +38,7 @@ export default function DuplicateBanner({
               <div key={idx} className="flex items-center gap-3">
                 <div className="relative flex-shrink-0">
                   <div
-                    className={`w-2 h-2 rounded-full ${tp.isOriginal ? 'bg-[#3B82F6]' : 'bg-[#F59E0B]'}`}
+                    className={`w-2 h-2 rounded-full ${tp.isOriginal ? 'bg-[#5757e6]' : 'bg-[#F59E0B]'}`}
                   />
                   {idx < allTouchpoints.length - 1 && (
                     <div className="absolute top-2 left-[3px] w-[2px] h-4 bg-[#2a2a2a]" />
@@ -47,7 +47,7 @@ export default function DuplicateBanner({
                 <div className="flex items-center gap-2 flex-wrap">
                   <ChannelBadge channel={tp.channel} />
                   {tp.isOriginal && (
-                    <span className="text-xs text-[#3B82F6] font-medium">Original</span>
+                    <span className="text-xs text-[#5757e6] font-medium">Original</span>
                   )}
                   {!tp.isOriginal && tp.captured_at && (
                     <span className="text-xs text-[#6B7280]">

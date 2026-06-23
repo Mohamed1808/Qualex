@@ -49,7 +49,7 @@ export default function ChannelPerformanceChart({ data }: ChannelPerformanceChar
             }}
           />
           <Legend wrapperStyle={{ color: '#9CA3AF', fontSize: '12px' }} />
-          <Bar dataKey="leads" name="Total Leads" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="leads" name="Total Leads" fill="#5757e6" radius={[4, 4, 0, 0]} />
           <Bar dataKey="qualificationRate" name="Qual. Rate %" fill="#22C55E" radius={[4, 4, 0, 0]} />
           <Bar dataKey="duplicateRate" name="Dup. Rate %" fill="#F59E0B" radius={[4, 4, 0, 0]} />
         </BarChart>

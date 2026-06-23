@@ -24,7 +24,7 @@ const CHANNEL_CONFIG: Record<
   website: {
     label: 'Website',
     emoji: '🌐',
-    color: '#7C3AED',
+    color: '#5757e6',
     bg: 'rgba(124,58,237,0.12)',
   },
   app: {

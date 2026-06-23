@@ -85,7 +85,7 @@ export default function ManualLeadIntake({ recentLeads }: ManualLeadIntakeProps)
                 {...register('name')}
                 type="text"
                 placeholder="Customer full name"
-                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
               />
               {errors.name && (
                 <p className="text-[10px] text-[#F26161] mt-1">{errors.name.message}</p>
@@ -99,7 +99,7 @@ export default function ManualLeadIntake({ recentLeads }: ManualLeadIntakeProps)
                 {...register('phone')}
                 type="tel"
                 placeholder="01XXXXXXXXX"
-                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
               />
               {errors.phone && (
                 <p className="text-[10px] text-[#F26161] mt-1">{errors.phone.message}</p>
@@ -111,7 +111,7 @@ export default function ManualLeadIntake({ recentLeads }: ManualLeadIntakeProps)
               <label className="text-xs text-[#9CA3AF] mb-1 block">Channel *</label>
               <select
                 {...register('channel')}
-                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
               >
                 <option value="call_center">Call Center</option>
                 <option value="whatsapp">WhatsApp</option>
@@ -128,7 +128,7 @@ export default function ManualLeadIntake({ recentLeads }: ManualLeadIntakeProps)
                 {...register('requested_car_brand')}
                 type="text"
                 placeholder="e.g. Toyota, BMW"
-                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
               />
             </div>
 
@@ -141,7 +141,7 @@ export default function ManualLeadIntake({ recentLeads }: ManualLeadIntakeProps)
                 placeholder="e.g. 2024"
                 min={2000}
                 max={2030}
-                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
               />
             </div>
 
@@ -152,7 +152,7 @@ export default function ManualLeadIntake({ recentLeads }: ManualLeadIntakeProps)
                 {...register('source_campaign')}
                 type="text"
                 placeholder="e.g. Summer2025"
-                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
               />
             </div>
           </div>
@@ -160,7 +160,7 @@ export default function ManualLeadIntake({ recentLeads }: ManualLeadIntakeProps)
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-50 text-white font-semibold text-sm rounded-lg py-3 transition-colors"
+            className="w-full bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white font-semibold text-sm rounded-lg py-3 transition-colors"
           >
             {submitting ? 'Creating Lead…' : '➕ Create Lead'}
           </button>

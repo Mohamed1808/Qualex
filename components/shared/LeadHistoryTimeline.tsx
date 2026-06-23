@@ -21,7 +21,7 @@ function stageColor(stage: string): string {
   if (['retired'].includes(stage)) return '#F59E0B'
   if (['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted'].includes(stage))
     return '#14B8A6'
-  return '#3B82F6'
+  return '#5757e6'
 }
 
 export default function LeadHistoryTimeline({ history }: LeadHistoryTimelineProps) {

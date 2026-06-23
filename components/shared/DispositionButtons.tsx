@@ -179,7 +179,7 @@ export default function DispositionButtons({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              className="w-full bg-[#0f0f0f] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+              className="w-full bg-[#0f0f0f] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
               placeholder={`Notes about this ${selected} disposition…`}
             />
           </div>
@@ -191,7 +191,7 @@ export default function DispositionButtons({
               className="flex-1 text-sm font-medium rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
               style={{
                 backgroundColor:
-                  DISPOSITIONS.find((d) => d.value === selected)?.color ?? '#3B82F6',
+                  DISPOSITIONS.find((d) => d.value === selected)?.color ?? '#5757e6',
                 color: '#000',
               }}
             >

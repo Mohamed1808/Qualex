@@ -207,7 +207,7 @@ export default function QualificationForm({
                 <label className="text-xs text-[#9CA3AF] mb-1 block">Monthly Salary Bracket</label>
                 <select
                   {...register('salary_bracket')}
-                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
                 >
                   <option value="">Select…</option>
                   <option value="below_3000">Below EGP 3,000</option>
@@ -226,7 +226,7 @@ export default function QualificationForm({
                 <label className="text-xs text-[#9CA3AF] mb-1 block">Down Payment Bracket</label>
                 <select
                   {...register('down_payment_bracket')}
-                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
                 >
                   <option value="">Select…</option>
                   <option value="below_20pct">Below 20%</option>
@@ -244,7 +244,7 @@ export default function QualificationForm({
                 <label className="text-xs text-[#9CA3AF] mb-1 block">Financing Program</label>
                 <select
                   {...register('financing_program')}
-                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
                 >
                   <option value="new_car">New Car</option>
                   <option value="used_car">Used Car</option>
@@ -257,7 +257,7 @@ export default function QualificationForm({
                 <label className="text-xs text-[#9CA3AF] mb-1 block">Car Source</label>
                 <select
                   {...register('car_source')}
-                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
                 >
                   <option value="dealer">Dealer</option>
                   <option value="individual_c2c">Individual (C2C)</option>
@@ -270,7 +270,7 @@ export default function QualificationForm({
                 <label className="text-xs text-[#9CA3AF] mb-1 block">Occupation</label>
                 <select
                   {...register('occupation')}
-                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
                 >
                   <option value="">Select…</option>
                   {occupations.map((occ) => (
@@ -291,7 +291,7 @@ export default function QualificationForm({
                   {...register('customer_national_id')}
                   type="text"
                   placeholder="14-digit national ID"
-                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+                  className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
                 />
               </div>
             </div>
@@ -301,7 +301,7 @@ export default function QualificationForm({
               <input
                 type="checkbox"
                 {...register('knows_specific_car')}
-                className="w-4 h-4 rounded border-[#2a2a2a] bg-[#1c1c22] text-[#3B82F6] focus:ring-[#3B82F6]"
+                className="w-4 h-4 rounded border-[#2a2a2a] bg-[#1c1c22] text-[#5757e6] focus:ring-[#5757e6]"
               />
               <span className="text-sm text-[#9CA3AF]">Customer has a specific car in mind</span>
             </label>
@@ -313,7 +313,7 @@ export default function QualificationForm({
                 {...register('tele_notes')}
                 rows={3}
                 placeholder="Any notes for the DS agent…"
-                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 resize-none placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 resize-none placeholder-[#4B5563] focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
               />
             </div>
           </form>
@@ -352,7 +352,7 @@ export default function QualificationForm({
             </h2>
             <button
               onClick={() => setShowFollowUp(!showFollowUp)}
-              className="text-xs text-[#3B82F6] hover:text-[#60A5FA] transition-colors"
+              className="text-xs text-[#5757e6] hover:text-[#7d7dee] transition-colors"
             >
               {showFollowUp ? 'Hide' : 'Schedule'}
             </button>
@@ -368,11 +368,11 @@ export default function QualificationForm({
                 type="datetime-local"
                 value={followUpAt}
                 onChange={(e) => setFollowUpAt(e.target.value)}
-                className="flex-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+                className="flex-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]"
               />
               <button
                 onClick={handleFollowUpSave}
-                className="px-4 py-2 bg-[#3B82F6] text-white text-sm rounded-lg hover:bg-[#2563EB] transition-colors"
+                className="px-4 py-2 bg-[#5757e6] text-white text-sm rounded-lg hover:bg-[#4444cc] transition-colors"
               >
                 Save
               </button>
