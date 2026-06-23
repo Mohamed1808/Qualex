@@ -32,6 +32,9 @@ export type NotificationType =
   | 'sla_breach'
   | 'duplicate_detected'
   | 'callback_due'
+  | 'new_lead_unassigned'
+  | 'lead_qualified'
+  | 'credit_decision'
 
 export type CallOutcome = 'answered' | 'no_answer' | 'callback_scheduled'
 export type CallStage = 'telesales' | 'direct_sales'

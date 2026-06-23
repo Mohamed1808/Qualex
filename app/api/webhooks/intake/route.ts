@@ -81,8 +81,24 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Auto-assign: find least-loaded available telesales agent
-  await autoAssignNewLead(supabase, lead.id)
+  // Supervisor-driven model: the lead stays unassigned (stage 'new') in the
+  // Telesales Supervisor queue. Notify all active telesales supervisors.
+  const { data: supervisors } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('role', 'telesales_supervisor')
+    .eq('is_active', true)
+
+  if (supervisors && supervisors.length > 0) {
+    await supabase.from('notifications').insert(
+      supervisors.map((s) => ({
+        user_id: s.id,
+        lead_id: lead.id,
+        type: 'new_lead_unassigned',
+        message: `New lead awaiting assignment: ${payload.name}`,
+      }))
+    )
+  }
 
   // Log stage history
   await supabase.from('lead_stage_history').insert({
@@ -101,58 +117,4 @@ export async function POST(request: NextRequest) {
     },
     { status: 201 }
   )
-}
-
-async function autoAssignNewLead(
-  supabase: ReturnType<typeof createAdminClient>,
-  leadId: string
-) {
-  const today = new Date().toISOString().split('T')[0]
-
-  const { data: agents } = await supabase
-    .from('profiles')
-    .select('id, daily_attendance!inner(checked_in, checked_out, on_break, date)')
-    .eq('role', 'telesales_agent')
-    .eq('is_active', true)
-    .eq('is_on_break', false)
-    .eq('daily_attendance.date', today)
-    .eq('daily_attendance.checked_in', true)
-    .eq('daily_attendance.checked_out', false)
-
-  if (!agents || agents.length === 0) return
-
-  const agentIds = agents.map((a) => a.id)
-
-  const { data: activeCounts } = await supabase
-    .from('leads')
-    .select('assigned_telesales_agent')
-    .in('assigned_telesales_agent', agentIds)
-    .in('stage', ['new', 'telesales_assigned', 'telesales_in_progress'])
-
-  const counts: Record<string, number> = {}
-  for (const id of agentIds) counts[id] = 0
-  for (const l of activeCounts ?? []) {
-    if (l.assigned_telesales_agent) counts[l.assigned_telesales_agent]++
-  }
-
-  const bestAgent = agentIds.reduce((best, id) => (counts[id] < counts[best] ? id : best))
-  const { addWorkingHours: awh, SLA_TELESALES_HOURS: slah } = await import('@/lib/sla')
-  const slaDueAt = awh(new Date(), slah)
-
-  await supabase
-    .from('leads')
-    .update({
-      assigned_telesales_agent: bestAgent,
-      stage: 'telesales_assigned',
-      telesales_assigned_at: new Date().toISOString(),
-      tele_sla_due_at: slaDueAt.toISOString(),
-    })
-    .eq('id', leadId)
-
-  await supabase.from('notifications').insert({
-    user_id: bestAgent,
-    lead_id: leadId,
-    type: 'new_lead_assigned',
-    message: 'A new lead has been assigned to you',
-  })
 }

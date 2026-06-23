@@ -15,6 +15,9 @@ const NOTIFICATION_ICONS: Record<string, string> = {
   sla_breach: '🚨',
   duplicate_detected: '🔁',
   callback_due: '📞',
+  new_lead_unassigned: '🆕',
+  lead_qualified: '✅',
+  credit_decision: '🏦',
 }
 
 export default function NotificationBell({ userId }: NotificationBellProps) {

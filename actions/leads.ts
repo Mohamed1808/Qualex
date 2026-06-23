@@ -5,6 +5,37 @@ import { normalizeEgyptianPhone } from '@/lib/phone'
 import { addWorkingHours, SLA_TELESALES_HOURS } from '@/lib/sla'
 import type { LeadChannel, QualificationData } from '@/types/database'
 import { isTerminalStage } from '@/lib/assignment'
+import type { NotificationType, UserRole } from '@/types/database'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+/**
+ * Send a notification to every active user holding a given role.
+ * Used to ping supervisors when leads enter their queue.
+ */
+async function notifyRole(
+  supabase: SupabaseClient,
+  role: UserRole,
+  type: NotificationType,
+  message: string,
+  leadId: string
+) {
+  const { data: recipients } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('role', role)
+    .eq('is_active', true)
+
+  if (!recipients || recipients.length === 0) return
+
+  await supabase.from('notifications').insert(
+    recipients.map((r: { id: string }) => ({
+      user_id: r.id,
+      lead_id: leadId,
+      type,
+      message,
+    }))
+  )
+}
 
 interface CreateLeadInput {
   name: string
@@ -45,6 +76,15 @@ export async function createLead(data: CreateLeadInput) {
 
   // New leads land unassigned in the Telesales Supervisor queue (stage 'new').
   // The supervisor assigns them to an agent manually.
+  if (lead && !lead.is_duplicate) {
+    await notifyRole(
+      supabase,
+      'telesales_supervisor',
+      'new_lead_unassigned',
+      `New lead awaiting assignment: ${data.name}`,
+      lead.id
+    )
+  }
 
   // Log stage history
   await supabase.from('lead_stage_history').insert({
@@ -73,7 +113,7 @@ export async function updateLeadDisposition(
   // Fetch current lead
   const { data: lead, error: fetchError } = await supabase
     .from('leads')
-    .select('stage, tele_disposition, ds_disposition')
+    .select('stage, name, tele_disposition, ds_disposition')
     .eq('id', leadId)
     .single()
 
@@ -129,6 +169,17 @@ export async function updateLeadDisposition(
     })
   }
 
+  // Ping DS supervisors when a telesales lead becomes qualified
+  if (stage === 'telesales' && updates.stage === 'qualified') {
+    await notifyRole(
+      supabase,
+      'direct_sales_supervisor',
+      'lead_qualified',
+      `Qualified lead awaiting assignment: ${lead.name}`,
+      leadId
+    )
+  }
+
   return { success: true }
 }
 
@@ -171,7 +222,7 @@ export async function qualifyLead(leadId: string, qualificationData: Qualificati
 
   const { data: lead, error: fetchError } = await supabase
     .from('leads')
-    .select('stage')
+    .select('stage, name')
     .eq('id', leadId)
     .single()
 
@@ -209,6 +260,13 @@ export async function qualifyLead(leadId: string, qualificationData: Qualificati
 
   // Qualified leads land unassigned in the Direct Sales Supervisor queue (stage 'qualified').
   // The DS supervisor assigns them to a direct sales agent manually.
+  await notifyRole(
+    supabase,
+    'direct_sales_supervisor',
+    'lead_qualified',
+    `Qualified lead awaiting assignment: ${lead.name}`,
+    leadId
+  )
 
   return { success: true }
 }

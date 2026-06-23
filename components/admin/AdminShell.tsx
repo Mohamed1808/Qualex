@@ -12,6 +12,8 @@ interface AdminShellProps {
 
 const navItems = [
   { href: '/admin', label: 'Lead Intake', icon: '➕' },
+  { href: '/admin/credit', label: 'Credit Decisions', icon: '🏦' },
+  { href: '/admin/audit', label: 'Audit Log', icon: '📜' },
   { href: '/admin/users', label: 'Users', icon: '👥' },
   { href: '/admin/config', label: 'Config', icon: '⚙️' },
 ]
