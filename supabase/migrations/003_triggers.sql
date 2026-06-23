@@ -78,10 +78,14 @@ CREATE TRIGGER lead_dedup_check BEFORE INSERT ON leads
   FOR EACH ROW EXECUTE FUNCTION check_lead_duplicate();
 
 -- Auto-create profile on user signup
+-- NOTE: search_path must be pinned. This trigger fires inside the auth.users
+-- insert where `public` is not on the search path, so unqualified table names
+-- (and even schema-qualified ones without search_path) fail with
+-- "relation profiles does not exist", aborting user creation.
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO profiles (id, full_name, role)
+  INSERT INTO public.profiles (id, full_name, role)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
@@ -90,7 +94,7 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
 
 CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
