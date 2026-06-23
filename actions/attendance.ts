@@ -20,6 +20,7 @@ export async function checkIn() {
   const today = todayCairo()
   const now = new Date().toISOString()
 
+  // Allow re-check-in: reset checked_out and on_break as well
   const { error } = await supabase
     .from('daily_attendance')
     .upsert(
@@ -28,11 +29,21 @@ export async function checkIn() {
         date: today,
         checked_in: true,
         checked_in_at: now,
+        checked_out: false,
+        checked_out_at: null,
+        on_break: false,
       },
       { onConflict: 'agent_id,date' }
     )
 
   if (error) return { error: error.message }
+
+  // Reset profile break status too
+  await supabase
+    .from('profiles')
+    .update({ is_on_break: false, break_started_at: null })
+    .eq('id', user.id)
+
   return { success: true }
 }
 
