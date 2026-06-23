@@ -80,6 +80,7 @@ export default function DSSupervisorQueue({ initialLeads, agents }: DSSupervisor
           className="bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#14B8A6]"
         >
           <option value="">All Stages</option>
+          <option value="qualified">Qualified — Awaiting Assignment</option>
           <option value="ds_assigned">DS Assigned</option>
           <option value="ds_in_progress">DS In Progress</option>
           <option value="id_collected">ID Collected</option>
@@ -182,12 +183,19 @@ export default function DSSupervisorQueue({ initialLeads, agents }: DSSupervisor
                               Cancel
                             </button>
                           </div>
-                        ) : (
+                        ) : lead.assigned_direct_sales_agent ? (
                           <button
                             onClick={() => setReassigning(lead.id)}
                             className="text-xs text-[#6B7280] hover:text-white"
                           >
                             Reassign
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setReassigning(lead.id)}
+                            className="text-xs font-medium text-[#0f0f0f] bg-[#14B8A6] hover:bg-[#0d9488] px-2.5 py-1 rounded"
+                          >
+                            Assign →
                           </button>
                         )}
                       </div>

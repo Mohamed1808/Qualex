@@ -134,6 +134,14 @@ export default function LoginPage() {
               {errors.password && (
                 <p className="mt-1 text-xs text-[#F26161]">{errors.password.message}</p>
               )}
+              <div className="mt-1.5 text-right">
+                <a
+                  href="/forgot-password"
+                  className="text-xs text-[#3B82F6] hover:text-[#60A5FA] transition-colors"
+                >
+                  Forgot password?
+                </a>
+              </div>
             </div>
 
             {/* Submit */}

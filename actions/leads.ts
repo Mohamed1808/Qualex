@@ -5,7 +5,6 @@ import { normalizeEgyptianPhone } from '@/lib/phone'
 import { addWorkingHours, SLA_TELESALES_HOURS } from '@/lib/sla'
 import type { LeadChannel, QualificationData } from '@/types/database'
 import { isTerminalStage } from '@/lib/assignment'
-import { autoAssignLead } from './assignment'
 
 interface CreateLeadInput {
   name: string
@@ -44,10 +43,8 @@ export async function createLead(data: CreateLeadInput) {
 
   if (error) return { error: error.message }
 
-  // Trigger auto-assignment
-  if (lead && !lead.is_duplicate) {
-    await autoAssignLead(lead.id)
-  }
+  // New leads land unassigned in the Telesales Supervisor queue (stage 'new').
+  // The supervisor assigns them to an agent manually.
 
   // Log stage history
   await supabase.from('lead_stage_history').insert({
@@ -210,8 +207,8 @@ export async function qualifyLead(leadId: string, qualificationData: Qualificati
     note: 'Lead qualified by telesales',
   })
 
-  // Trigger DS assignment
-  await autoAssignLead(leadId)
+  // Qualified leads land unassigned in the Direct Sales Supervisor queue (stage 'qualified').
+  // The DS supervisor assigns them to a direct sales agent manually.
 
   return { success: true }
 }

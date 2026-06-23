@@ -21,7 +21,12 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Allow public routes
-  if (pathname.startsWith('/login') || pathname.startsWith('/api/')) {
+  if (
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/forgot-password') ||
+    pathname.startsWith('/reset-password') ||
+    pathname.startsWith('/api/')
+  ) {
     return NextResponse.next()
   }
 

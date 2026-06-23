@@ -29,6 +29,12 @@ const navItems = [
     roles: ['telesales_supervisor'],
   },
   {
+    href: '/telesales/supervisor/analytics',
+    label: 'Analytics',
+    icon: '📊',
+    roles: ['telesales_supervisor'],
+  },
+  {
     href: '/telesales/supervisor/attendance',
     label: 'Attendance',
     icon: '✅',

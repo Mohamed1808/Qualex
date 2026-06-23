@@ -220,12 +220,19 @@ export default function TSSupervisorQueue({ initialLeads, agents }: TSSupervisor
                               Cancel
                             </button>
                           </div>
-                        ) : (
+                        ) : lead.assigned_telesales_agent ? (
                           <button
                             onClick={() => setReassigning(lead.id)}
                             className="text-xs text-[#6B7280] hover:text-white"
                           >
                             Reassign
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setReassigning(lead.id)}
+                            className="text-xs font-medium text-white bg-[#3B82F6] hover:bg-[#2563EB] px-2.5 py-1 rounded"
+                          >
+                            Assign →
                           </button>
                         )}
                       </div>

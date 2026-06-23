@@ -6,7 +6,7 @@ import { isPreviewMode, MOCK_LEADS, MOCK_PROFILES } from '@/lib/preview'
 export default async function DSSupervisorPage() {
   if (isPreviewMode()) {
     const dsLeads = MOCK_LEADS.filter((l) =>
-      ['ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted'].includes(l.stage)
+      ['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted'].includes(l.stage)
     )
     const dsAgents = MOCK_PROFILES.filter((p) => p.role === 'direct_sales_agent')
     return (
@@ -31,7 +31,7 @@ export default async function DSSupervisorPage() {
         profiles_telesales:profiles!leads_assigned_telesales_agent_fkey(id, full_name, role),
         profiles_direct_sales:profiles!leads_assigned_direct_sales_agent_fkey(id, full_name, role)
       `)
-      .in('stage', ['ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted'])
+      .in('stage', ['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted'])
       .order('created_at', { ascending: false }),
     supabase
       .from('profiles')

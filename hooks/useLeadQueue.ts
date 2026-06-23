@@ -39,7 +39,7 @@ export function useLeadQueue({ userId, role, initialData }: UseLeadQueueOptions)
           .eq('assigned_direct_sales_agent', userId)
           .in('stage', ['ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted'])
       } else if (role === 'direct_sales_supervisor') {
-        q = q.in('stage', ['ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted'])
+        q = q.in('stage', ['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted'])
       } else if (role === 'admin') {
         // Admin sees all
       }

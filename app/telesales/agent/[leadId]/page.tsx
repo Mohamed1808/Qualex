@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import QualificationForm from '@/components/telesales/QualificationForm'
+import LeadHistoryTimeline from '@/components/shared/LeadHistoryTimeline'
 import { isPreviewMode, MOCK_USER, MOCK_LEADS, MOCK_OCCUPATIONS } from '@/lib/preview'
 
 interface Props {
@@ -26,7 +27,7 @@ export default async function LeadDetailPage({ params }: Props) {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [leadResult, attemptsResult, occupationsResult] = await Promise.all([
+  const [leadResult, attemptsResult, occupationsResult, historyResult] = await Promise.all([
     supabase
       .from('leads')
       .select(`
@@ -47,16 +48,26 @@ export default async function LeadDetailPage({ params }: Props) {
       .select('*')
       .eq('is_active', true)
       .order('sort_order'),
+    supabase
+      .from('lead_stage_history')
+      .select('id, from_stage, to_stage, changed_at, note, changed_by_profile:profiles!lead_stage_history_changed_by_fkey(full_name, role)')
+      .eq('lead_id', params.leadId)
+      .order('changed_at', { ascending: true }),
   ])
 
   if (leadResult.error || !leadResult.data) notFound()
 
   return (
-    <QualificationForm
-      lead={leadResult.data}
-      initialAttempts={attemptsResult.data ?? []}
-      occupations={occupationsResult.data ?? []}
-      agentId={user.id}
-    />
+    <div className="space-y-6">
+      <QualificationForm
+        lead={leadResult.data}
+        initialAttempts={attemptsResult.data ?? []}
+        occupations={occupationsResult.data ?? []}
+        agentId={user.id}
+      />
+      <div className="px-6 pb-6 max-w-4xl mx-auto">
+        <LeadHistoryTimeline history={(historyResult.data as never) ?? []} />
+      </div>
+    </div>
   )
 }
