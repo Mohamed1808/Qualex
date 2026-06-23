@@ -37,13 +37,24 @@ export async function autoAssignLead(leadId: string) {
     .eq('daily_attendance.checked_in', true)
     .eq('daily_attendance.checked_out', false)
 
-  if (!availableAgents || availableAgents.length === 0) {
-    // No agents available — leave unassigned
-    return { agentId: null, reason: 'No available agents' }
+  let agentPool = availableAgents ?? []
+
+  if (agentPool.length === 0) {
+    // Fallback: assign to any active agent on the team (ignore attendance)
+    const { data: fallbackAgents } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('role', teamRole)
+      .eq('is_active', true)
+
+    if (!fallbackAgents || fallbackAgents.length === 0) {
+      return { agentId: null, reason: 'No active agents on this team' }
+    }
+    agentPool = fallbackAgents
   }
 
   // Count active leads per agent
-  const agentIds = availableAgents.map((a) => a.id)
+  const agentIds = agentPool.map((a) => a.id)
   const stageField = isDS ? 'assigned_direct_sales_agent' : 'assigned_telesales_agent'
   const activeStages = isDS
     ? ['ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted']
