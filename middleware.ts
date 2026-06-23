@@ -18,16 +18,22 @@ const ROUTE_ROLES: Record<string, string[]> = {
 }
 
 export async function middleware(request: NextRequest) {
-  const { response, user, supabase } = await updateSession(request)
   const pathname = request.nextUrl.pathname
 
   // Allow public routes
   if (pathname.startsWith('/login') || pathname.startsWith('/api/')) {
-    return response
+    return NextResponse.next()
   }
 
+  // Skip auth if Supabase is not configured
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    return NextResponse.next()
+  }
+
+  const { response, user, supabase } = await updateSession(request)
+
   // Redirect unauthenticated users to login
-  if (!user) {
+  if (!user || !supabase) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
