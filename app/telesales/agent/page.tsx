@@ -1,8 +1,23 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import AgentLeadQueue from '@/components/telesales/AgentLeadQueue'
+import { isPreviewMode, MOCK_USER, MOCK_PROFILE, MOCK_LEADS } from '@/lib/preview'
 
 export default async function TeleSalesAgentPage() {
+  if (isPreviewMode()) {
+    const tsLeads = MOCK_LEADS.filter(
+      (l) => l.assigned_telesales_agent === MOCK_USER.id &&
+        ['telesales_assigned', 'telesales_in_progress'].includes(l.stage)
+    )
+    return (
+      <AgentLeadQueue
+        userId={MOCK_USER.id}
+        role={MOCK_PROFILE.role}
+        initialLeads={tsLeads}
+      />
+    )
+  }
+
   const supabase = createClient()
   const {
     data: { user },

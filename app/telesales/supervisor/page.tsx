@@ -1,8 +1,19 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import TSSupervisorQueue from '@/components/telesales/TSSupervisorQueue'
+import { isPreviewMode, MOCK_LEADS, MOCK_PROFILES } from '@/lib/preview'
 
 export default async function TSSupervisorPage() {
+  if (isPreviewMode()) {
+    const tsAgents = MOCK_PROFILES.filter((p) => p.role === 'telesales_agent')
+    return (
+      <TSSupervisorQueue
+        initialLeads={MOCK_LEADS}
+        agents={tsAgents}
+      />
+    )
+  }
+
   const supabase = createClient()
   const {
     data: { user },

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { isPreviewMode, MOCK_LEADS, MOCK_PROFILES } from '@/lib/preview'
 import ConversionFunnel from '@/components/analytics/ConversionFunnel'
 import SLAComplianceChart from '@/components/analytics/SLAComplianceChart'
 import ChannelPerformanceChart from '@/components/analytics/ChannelPerformanceChart'
@@ -8,6 +9,85 @@ import ScriptQualityChart from '@/components/analytics/ScriptQualityChart'
 import { subDays, format } from 'date-fns'
 
 export default async function DSAnalyticsPage() {
+  if (isPreviewMode()) {
+    const leads = MOCK_LEADS
+    const dsAgents = MOCK_PROFILES.filter((p) => p.role === 'direct_sales_agent')
+
+    const funnelData = {
+      captured: leads.length,
+      tsReached: leads.filter((l) => l.stage !== 'new').length,
+      tsQualified: leads.filter((l) =>
+        ['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted', 'approved', 'rejected'].includes(l.stage)
+      ).length,
+      dsReached: leads.filter((l) =>
+        ['ds_in_progress', 'id_collected', 'credit_submitted', 'approved', 'rejected'].includes(l.stage)
+      ).length,
+      dsQualified: leads.filter((l) =>
+        ['id_collected', 'credit_submitted', 'approved'].includes(l.stage)
+      ).length,
+      creditSubmitted: leads.filter((l) => ['credit_submitted', 'approved'].includes(l.stage)).length,
+      approved: leads.filter((l) => l.stage === 'approved').length,
+    }
+
+    const slaData = Array.from({ length: 14 }, (_, i) => {
+      const d = subDays(new Date(), 13 - i)
+      return { date: format(d, 'MMM d'), telesales: 85 + Math.round(Math.random() * 15), directSales: 80 + Math.round(Math.random() * 20) }
+    })
+
+    const channelData = [
+      { channel: 'WhatsApp', leads: 12, qualificationRate: 58, duplicateRate: 8 },
+      { channel: 'Meta', leads: 18, qualificationRate: 44, duplicateRate: 12 },
+      { channel: 'Website', leads: 7, qualificationRate: 71, duplicateRate: 3 },
+      { channel: 'Call Center', leads: 5, qualificationRate: 60, duplicateRate: 0 },
+    ]
+
+    const agentPerformance = dsAgents.map((agent) => ({
+      agentId: agent.id,
+      agentName: agent.full_name,
+      totalLeads: 8,
+      qualified: 5,
+      unqualified: 2,
+      terminated: 1,
+      avgCallsToQualify: 2.4,
+      slaCompliance: 88,
+    }))
+
+    const totalLeads = leads.length
+    const totalApproved = leads.filter((l) => l.stage === 'approved').length
+    const totalQualified = leads.filter((l) =>
+      ['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted', 'approved'].includes(l.stage)
+    ).length
+    const overallConversion = totalLeads > 0 ? ((totalApproved / totalLeads) * 100).toFixed(1) : '0.0'
+
+    return (
+      <div className="p-6 space-y-6">
+        <div>
+          <h1 className="text-xl font-semibold text-white">Analytics Dashboard</h1>
+          <p className="text-sm text-[#6B7280] mt-0.5">All-time performance overview</p>
+        </div>
+        <div className="grid grid-cols-4 gap-4">
+          {[
+            { label: 'Total Leads', value: totalLeads.toLocaleString(), color: '#3B82F6' },
+            { label: 'TS Qualified', value: totalQualified.toLocaleString(), color: '#14B8A6' },
+            { label: 'Approved', value: totalApproved.toLocaleString(), color: '#22C55E' },
+            { label: 'Conversion Rate', value: `${overallConversion}%`, color: '#F59E0B' },
+          ].map((kpi) => (
+            <div key={kpi.label} className="bg-[#161616] border border-[#2a2a2a] rounded-xl p-4">
+              <p className="text-xs text-[#6B7280] mb-1">{kpi.label}</p>
+              <p className="text-2xl font-bold" style={{ color: kpi.color }}>{kpi.value}</p>
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <ConversionFunnel data={funnelData} />
+          <SLAComplianceChart data={slaData} />
+        </div>
+        <ChannelPerformanceChart data={channelData} />
+        <AgentPerformanceTable data={agentPerformance} teamType="direct_sales" />
+      </div>
+    )
+  }
+
   const supabase = createClient()
   const {
     data: { user },

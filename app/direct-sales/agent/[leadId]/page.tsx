@@ -1,12 +1,26 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import DSQualificationForm from '@/components/direct-sales/DSQualificationForm'
+import { isPreviewMode, MOCK_USER, MOCK_LEADS, MOCK_OCCUPATIONS } from '@/lib/preview'
 
 interface Props {
   params: { leadId: string }
 }
 
 export default async function DSLeadDetailPage({ params }: Props) {
+  if (isPreviewMode()) {
+    const lead = MOCK_LEADS.find((l) => l.id === params.leadId) ?? MOCK_LEADS[0]
+    return (
+      <DSQualificationForm
+        lead={lead}
+        tsAttempts={[]}
+        dsAttempts={[]}
+        occupations={MOCK_OCCUPATIONS}
+        agentId={MOCK_USER.id}
+      />
+    )
+  }
+
   const supabase = createClient()
   const {
     data: { user },

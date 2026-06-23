@@ -1,8 +1,22 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import DSAgentLeadQueue from '@/components/direct-sales/DSAgentLeadQueue'
+import { isPreviewMode, MOCK_USER, MOCK_LEADS } from '@/lib/preview'
 
 export default async function DSAgentPage() {
+  if (isPreviewMode()) {
+    const dsLeads = MOCK_LEADS.filter(
+      (l) => ['ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted'].includes(l.stage)
+    )
+    return (
+      <DSAgentLeadQueue
+        userId={MOCK_USER.id}
+        role="direct_sales_agent"
+        initialLeads={dsLeads}
+      />
+    )
+  }
+
   const supabase = createClient()
   const {
     data: { user },

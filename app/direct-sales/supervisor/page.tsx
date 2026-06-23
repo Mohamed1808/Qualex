@@ -1,8 +1,22 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import DSSupervisorQueue from '@/components/direct-sales/DSSupervisorQueue'
+import { isPreviewMode, MOCK_LEADS, MOCK_PROFILES } from '@/lib/preview'
 
 export default async function DSSupervisorPage() {
+  if (isPreviewMode()) {
+    const dsLeads = MOCK_LEADS.filter((l) =>
+      ['ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted'].includes(l.stage)
+    )
+    const dsAgents = MOCK_PROFILES.filter((p) => p.role === 'direct_sales_agent')
+    return (
+      <DSSupervisorQueue
+        initialLeads={dsLeads}
+        agents={dsAgents}
+      />
+    )
+  }
+
   const supabase = createClient()
   const {
     data: { user },
