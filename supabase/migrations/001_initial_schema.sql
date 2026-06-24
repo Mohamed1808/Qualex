@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS call_attempts (
   lead_id UUID REFERENCES leads(id) ON DELETE CASCADE,
   agent_id UUID REFERENCES profiles(id),
   stage TEXT NOT NULL CHECK (stage IN ('telesales','direct_sales')),
-  attempt_number INTEGER NOT NULL CHECK (attempt_number BETWEEN 1 AND 3),
+  attempt_number INTEGER NOT NULL CHECK (attempt_number >= 1),
   called_at TIMESTAMPTZ DEFAULT now(),
   outcome TEXT NOT NULL CHECK (outcome IN ('answered','no_answer','callback_scheduled')),
   callback_at TIMESTAMPTZ,
