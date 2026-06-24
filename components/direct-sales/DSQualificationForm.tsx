@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import type { Lead, CallAttempt, ConfigOccupation } from '@/types/database'
@@ -29,6 +29,10 @@ export default function DSQualificationForm({
 }: DSQualificationFormProps) {
   const router = useRouter()
   const [dsAttemptsList, setDsAttemptsList] = useState(dsAttempts)
+  // Keep attempts in sync after router.refresh() re-fetches the lead's attempts
+  useEffect(() => {
+    setDsAttemptsList(dsAttempts)
+  }, [dsAttempts])
   const [dsNotes, setDsNotes] = useState(lead.ds_notes ?? '')
   const [savingNotes, setSavingNotes] = useState(false)
   const [showFollowUp, setShowFollowUp] = useState(false)

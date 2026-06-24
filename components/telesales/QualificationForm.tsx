@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -46,6 +46,10 @@ export default function QualificationForm({
 }: QualificationFormProps) {
   const router = useRouter()
   const [attempts, setAttempts] = useState<CallAttempt[]>(initialAttempts)
+  // Keep attempts in sync after router.refresh() re-fetches the lead's attempts
+  useEffect(() => {
+    setAttempts(initialAttempts)
+  }, [initialAttempts])
   const [showFollowUp, setShowFollowUp] = useState(false)
   const [followUpAt, setFollowUpAt] = useState('')
   const [submittingQual, setSubmittingQual] = useState(false)

@@ -16,18 +16,35 @@ export async function logCallAttempt(
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  // Count existing attempts for this lead/stage
+  // Fetch existing attempts (oldest → newest) for this lead/stage
   const { data: existingAttempts, error: countError } = await supabase
     .from('call_attempts')
-    .select('id, attempt_number')
+    .select('attempt_number, outcome')
     .eq('lead_id', leadId)
     .eq('stage', stage)
-    .order('attempt_number', { ascending: false })
+    .order('attempt_number', { ascending: true })
 
   if (countError) return { error: countError.message }
 
-  const nextAttemptNumber = (existingAttempts?.[0]?.attempt_number ?? 0) + 1
-  if (nextAttemptNumber > 3) return { error: 'Maximum 3 call attempts allowed' }
+  const list = existingAttempts ?? []
+
+  // Count the trailing streak of consecutive "no answer" outcomes.
+  // A callback or an answered call resets the streak — the customer is still
+  // reachable and engaged, so attempts may continue until they decide.
+  let noAnswerStreak = 0
+  for (let i = list.length - 1; i >= 0; i--) {
+    if (list[i].outcome === 'no_answer') noAnswerStreak++
+    else break
+  }
+
+  // Hard stop: 3 consecutive no-answers ⇒ customer is unreachable.
+  if (noAnswerStreak >= 3) {
+    return { error: 'Customer is unreachable after 3 consecutive no-answers.' }
+  }
+
+  // The attempt number always increments across the full history.
+  const lastNumber = list.length > 0 ? list[list.length - 1].attempt_number : 0
+  const nextAttemptNumber = lastNumber + 1
 
   // Insert call attempt
   const { data: attempt, error: insertError } = await supabase
@@ -40,28 +57,42 @@ export async function logCallAttempt(
       outcome,
       callback_at: callbackAt ?? null,
       notes: notes ?? null,
-      agent_confirmed_call: nextAttemptNumber === 1, // First attempt auto-confirmed
+      agent_confirmed_call: true,
     })
     .select()
     .single()
 
   if (insertError) return { error: insertError.message }
 
-  // Update lead stage if needed
-  const stageField = stage === 'telesales' ? 'telesales_in_progress' : 'ds_in_progress'
   const followUpField = stage === 'telesales' ? 'tele_follow_up_at' : 'ds_follow_up_at'
+  const updates: Record<string, unknown> = {}
 
-  const updates: Record<string, unknown> = {
-    stage: stageField,
-  }
+  const newStreak = outcome === 'no_answer' ? noAnswerStreak + 1 : 0
 
-  if (outcome === 'callback_scheduled' && callbackAt) {
-    updates[followUpField] = callbackAt
+  if (outcome === 'no_answer' && newStreak >= 3) {
+    // Third consecutive no-answer — close the lead as unreachable.
+    updates.stage = 'unreachable'
+  } else {
+    updates.stage = stage === 'telesales' ? 'telesales_in_progress' : 'ds_in_progress'
+    if (outcome === 'callback_scheduled' && callbackAt) {
+      updates[followUpField] = callbackAt
+    }
   }
 
   await supabase.from('leads').update(updates).eq('id', leadId)
 
-  return { data: attempt }
+  // Log a stage-history entry when the lead becomes unreachable
+  if (updates.stage === 'unreachable') {
+    await supabase.from('lead_stage_history').insert({
+      lead_id: leadId,
+      from_stage: stage === 'telesales' ? 'telesales_in_progress' : 'ds_in_progress',
+      to_stage: 'unreachable',
+      changed_by: user.id,
+      note: 'Closed as unreachable after 3 consecutive no-answers',
+    })
+  }
+
+  return { data: attempt, unreachable: updates.stage === 'unreachable' }
 }
 
 export async function confirmCallAttempt(attemptId: string) {

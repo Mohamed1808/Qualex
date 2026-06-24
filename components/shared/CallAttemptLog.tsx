@@ -4,7 +4,7 @@ import { useState } from 'react'
 import type { CallAttempt, CallOutcome } from '@/types/database'
 import { format, parseISO } from 'date-fns'
 import { toast } from 'sonner'
-import { logCallAttempt, confirmCallAttempt } from '@/actions/callAttempts'
+import { logCallAttempt } from '@/actions/callAttempts'
 
 interface CallAttemptLogProps {
   leadId: string
@@ -30,36 +30,21 @@ export default function CallAttemptLog({ leadId, stage, attempts, onUpdate }: Ca
   const [selectedOutcome, setSelectedOutcome] = useState<CallOutcome>('answered')
   const [callbackAt, setCallbackAt] = useState<string>('')
   const [notes, setNotes] = useState<string>('')
-  const [confirming, setConfirming] = useState(false)
-  const [attemptConfirmed, setAttemptConfirmed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   const nextAttemptNumber = attempts.length + 1
-  const maxAttempts = 3
-  const canLog = nextAttemptNumber <= maxAttempts
 
-  // For attempt 3, agent must confirm attempt 2 first
-  const attempt2 = attempts.find((a) => a.attempt_number === 2)
-  const attempt2NeedsConfirm = attempt2 && !attempt2.agent_confirmed_call
-  const requiresConfirm = nextAttemptNumber === 3 && attempt2NeedsConfirm
-
-  async function handleConfirmAttempt2() {
-    if (!attempt2) return
-    setConfirming(true)
-    try {
-      const result = await confirmCallAttempt(attempt2.id)
-      if (result.error) {
-        toast.error(result.error)
-      } else {
-        toast.success('Attempt 2 confirmed')
-        onUpdate?.()
-      }
-    } catch {
-      toast.error('Failed to confirm attempt')
-    } finally {
-      setConfirming(false)
-    }
+  // Trailing streak of consecutive "no answer" outcomes. A callback or an
+  // answered call resets it — the customer is still reachable, so attempts
+  // continue until they decide. Three consecutive no-answers locks the lead.
+  const ordered = [...attempts].sort((a, b) => a.attempt_number - b.attempt_number)
+  let noAnswerStreak = 0
+  for (let i = ordered.length - 1; i >= 0; i--) {
+    if (ordered[i].outcome === 'no_answer') noAnswerStreak++
+    else break
   }
+  const NO_ANSWER_LIMIT = 3
+  const canLog = noAnswerStreak < NO_ANSWER_LIMIT
 
   async function handleLogCall() {
     setSubmitting(true)
@@ -75,11 +60,13 @@ export default function CallAttemptLog({ leadId, stage, attempts, onUpdate }: Ca
         toast.error(result.error)
       } else {
         toast.success(`Attempt ${nextAttemptNumber} logged`)
+        if ((result as { unreachable?: boolean }).unreachable) {
+          toast.warning('Customer marked unreachable after 3 consecutive no-answers.')
+        }
         setLogging(null)
         setNotes('')
         setCallbackAt('')
         setSelectedOutcome('answered')
-        setAttemptConfirmed(false)
         onUpdate?.()
       }
     } catch {
@@ -93,7 +80,12 @@ export default function CallAttemptLog({ leadId, stage, attempts, onUpdate }: Ca
     <div className="space-y-3">
       <div className="flex items-center justify-between mb-1">
         <h4 className="text-sm font-medium text-[#9CA3AF]">Call Attempts</h4>
-        <span className="text-xs text-[#6B7280]">{attempts.length}/{maxAttempts}</span>
+        <span className="text-xs text-[#6B7280]">
+          {attempts.length} logged
+          {noAnswerStreak > 0 && (
+            <span className="text-[#F26161]"> · {noAnswerStreak}/{NO_ANSWER_LIMIT} no-answer</span>
+          )}
+        </span>
       </div>
 
       {/* Existing attempts */}
@@ -143,24 +135,8 @@ export default function CallAttemptLog({ leadId, stage, attempts, onUpdate }: Ca
         </div>
       ))}
 
-      {/* Confirm attempt 2 before logging attempt 3 */}
-      {requiresConfirm && !attemptConfirmed && (
-        <div className="bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-lg p-3">
-          <p className="text-xs text-[#F59E0B] mb-2">
-            You must confirm that Attempt 2 was made before logging Attempt 3.
-          </p>
-          <button
-            onClick={handleConfirmAttempt2}
-            disabled={confirming}
-            className="text-xs bg-[#F59E0B] text-black font-medium px-3 py-1.5 rounded-lg hover:bg-[#D97706] disabled:opacity-50 transition-colors"
-          >
-            {confirming ? 'Confirming…' : 'Confirm Attempt 2 Was Made'}
-          </button>
-        </div>
-      )}
-
       {/* Log new attempt */}
-      {canLog && (!requiresConfirm || attempt2?.agent_confirmed_call) && (
+      {canLog && (
         <div>
           {logging === null ? (
             <button
@@ -233,9 +209,14 @@ export default function CallAttemptLog({ leadId, stage, attempts, onUpdate }: Ca
       )}
 
       {!canLog && (
-        <p className="text-xs text-[#4B5563] italic text-center py-2">
-          Maximum 3 call attempts reached.
-        </p>
+        <div className="bg-[#F26161]/10 border border-[#F26161]/30 rounded-lg p-3 text-center">
+          <p className="text-xs text-[#F26161] font-medium">
+            Customer unreachable — 3 consecutive no-answers.
+          </p>
+          <p className="text-[10px] text-[#6B7280] mt-1">
+            The lead has been closed. A callback at any point would have kept it open.
+          </p>
+        </div>
       )}
     </div>
   )
