@@ -1,9 +1,7 @@
 import { redirect } from 'next/navigation'
-import { isPreviewMode } from '@/lib/preview'
 
+// Frontend-only build: the app opens directly into the CRM.
+// Backend/auth will be wired up by the team on the company server.
 export default function Home() {
-  if (isPreviewMode()) {
-    redirect('/telesales/agent')
-  }
-  redirect('/login')
+  redirect('/crm/sales')
 }
