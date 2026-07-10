@@ -13,6 +13,8 @@ import type {
   LeadComment,
   LeadReminder,
   DistributionSchedule,
+  LeadChannel,
+  LeadStage,
 } from './types'
 
 export const SEED_STATUSES: LeadStatus[] = [
@@ -71,30 +73,101 @@ export const SEED_USERS: CrmUser[] = [
 ]
 
 const NAMES = ['Khaled Adel', 'Mona Sherif', 'Tarek Fouad', 'Yasmin Saad', 'Hossam Gamal', 'Dina Magdy', 'Sherif Nabil', 'Amira Lotfi', 'Walid Samir', 'Rania Adel', 'Ahmed Sobhy', 'Heba Kamal', 'Mostafa Ezz', 'Laila Hany', 'Omar Fathy', 'Salma Reda', 'Karim Wael', 'Nada Sami', 'Tamer Ashraf', 'Ghada Nasr']
-const CHANNELS: CrmLead['channel'][] = ['whatsapp', 'meta', 'website', 'app', 'call_center']
+const CHANNELS: LeadChannel[] = ['whatsapp', 'meta', 'website', 'app', 'call_center']
 const STATUS_IDS = SEED_STATUSES.map((s) => s.id)
 const PROJECT_IDS = SEED_PROJECTS.map((p) => p.id)
-const AGENT_IDS = ['u-ahmed', 'u-bahr', 'u-omar', null]
+const TS_AGENTS = ['u-ahmed', 'u-bahr']
 
 function daysAgo(n: number): string {
   const d = new Date()
   d.setDate(d.getDate() - n)
   return d.toISOString()
 }
+function hoursFromNow(h: number): string {
+  return new Date(Date.now() + h * 3600_000).toISOString()
+}
 
-export const SEED_LEADS: CrmLead[] = NAMES.map((name, i) => ({
-  id: `ld-${i + 1}`,
-  name,
-  phone: `0127${String(6660000 + i * 37).padStart(7, '0')}`,
-  facebook_url: i % 3 === 0 ? `https://facebook.com/${name.split(' ')[0].toLowerCase()}` : null,
-  channel: CHANNELS[i % CHANNELS.length],
-  project_id: PROJECT_IDS[i % PROJECT_IDS.length],
-  status_id: STATUS_IDS[i % STATUS_IDS.length],
-  assigned_user_id: AGENT_IDS[i % AGENT_IDS.length],
-  created_at: daysAgo(i),
-  updated_at: daysAgo(i > 3 ? i - 2 : 0),
-  expire_note: i % 5 === 0 ? 'You Locked It' : null,
-}))
+const STAGE_PLAN: LeadStage[] = [
+  'new', 'telesales_assigned', 'telesales_in_progress', 'qualified', 'ds_assigned',
+  'ds_in_progress', 'id_collected', 'credit_submitted', 'approved', 'rejected',
+  'unqualified', 'unreachable', 'new', 'telesales_assigned', 'qualified',
+  'ds_assigned', 'id_collected', 'approved', 'telesales_in_progress', 'new',
+]
+
+const DS_STAGES: LeadStage[] = ['ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted']
+const QUALIFIED_PLUS: LeadStage[] = ['qualified', ...DS_STAGES, 'approved', 'rejected']
+
+/** Build a fully-populated lead with pipeline defaults. */
+export function makeLead(partial: Partial<CrmLead> & { name: string; phone: string }): CrmLead {
+  return {
+    id: partial.id ?? Math.random().toString(36).slice(2, 10),
+    facebook_url: null, channel: 'call_center', project_id: null, status_id: null,
+    assigned_user_id: null, expire_note: null,
+    stage: 'new', assigned_telesales_agent: null, assigned_direct_sales_agent: null,
+    tele_disposition: null, ds_disposition: null, telesales_qualified_at: null, direct_sales_assigned_at: null,
+    tele_sla_due_at: null, tele_sla_breached: false, ds_sla_due_at: null, ds_sla_breached: false,
+    salary_bracket: null, down_payment_bracket: null, financing_program: null, car_source: null,
+    knows_specific_car: null, occupation: null, customer_national_id: null,
+    requested_car_brand: null, requested_car_year: null, id_document_url: null, unqualification_reason: null,
+    is_duplicate: false, duplicate_of: null,
+    created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    ...partial,
+  }
+}
+
+export const SEED_LEADS: CrmLead[] = NAMES.map((name, i) => {
+  const stage = STAGE_PLAN[i % STAGE_PLAN.length]
+  const tsAgent = TS_AGENTS[i % TS_AGENTS.length]
+  const inDS = DS_STAGES.includes(stage)
+  const dsTouched = inDS || stage === 'approved' || stage === 'rejected'
+  const qualified = QUALIFIED_PLUS.includes(stage)
+  const owner = dsTouched ? 'u-omar' : stage === 'new' ? null : tsAgent
+
+  return makeLead({
+    id: `ld-${i + 1}`,
+    name,
+    phone: `0127${String(6660000 + i * 37).padStart(7, '0')}`,
+    facebook_url: i % 3 === 0 ? `https://facebook.com/${name.split(' ')[0].toLowerCase()}` : null,
+    channel: CHANNELS[i % CHANNELS.length],
+    project_id: PROJECT_IDS[i % PROJECT_IDS.length],
+    status_id: STATUS_IDS[i % STATUS_IDS.length],
+    assigned_user_id: owner,
+    stage,
+    assigned_telesales_agent: stage === 'new' ? null : tsAgent,
+    assigned_direct_sales_agent: dsTouched ? 'u-omar' : null,
+    tele_disposition: qualified ? 'qualified' : stage === 'unqualified' ? 'unqualified' : stage === 'unreachable' ? 'no_answer' : null,
+    ds_disposition: stage === 'approved' ? 'qualified' : stage === 'rejected' ? 'unqualified' : null,
+    telesales_qualified_at: qualified ? daysAgo(i) : null,
+    direct_sales_assigned_at: dsTouched ? daysAgo(i > 1 ? i - 1 : 0) : null,
+    tele_sla_due_at: ['telesales_assigned', 'telesales_in_progress'].includes(stage) ? hoursFromNow(i % 3 === 0 ? -2 : 3) : null,
+    tele_sla_breached: stage === 'telesales_in_progress' && i % 3 === 0,
+    ds_sla_due_at: inDS ? hoursFromNow(i % 4 === 0 ? -1 : 6) : null,
+    ds_sla_breached: inDS && i % 4 === 0,
+    salary_bracket: qualified ? ['10000_20000', '20000_plus', '5000_10000'][i % 3] : null,
+    down_payment_bracket: qualified ? ['20_30pct', '30_50pct'][i % 2] : null,
+    financing_program: qualified ? (['new_car', 'used_car', 'collateral'] as const)[i % 3] : null,
+    car_source: qualified ? (['dealer', 'individual_c2c', 'undecided'] as const)[i % 3] : null,
+    occupation: qualified ? ['Engineer', 'Doctor', 'Accountant', 'Teacher'][i % 4] : null,
+    requested_car_brand: ['Toyota Corolla', 'Hyundai Tucson', 'Kia Sportage', 'Nissan Sunny'][i % 4],
+    requested_car_year: 2022 + (i % 3),
+    unqualification_reason: stage === 'unqualified' ? 'Income below threshold' : stage === 'rejected' ? 'Credit rejected by bank' : null,
+    created_at: daysAgo(i),
+    updated_at: daysAgo(i > 3 ? i - 2 : 0),
+    expire_note: i % 5 === 0 ? 'You Locked It' : null,
+  })
+})
+
+export const SEED_ATTENDANCE: import('./types').Attendance[] = SEED_USERS
+  .filter((u) => u.role.includes('agent'))
+  .map((u) => ({
+    user_id: u.id, date: new Date().toISOString().slice(0, 10),
+    checked_in: u.id !== 'u-bahr', checked_in_at: daysAgo(0),
+    checked_out: false, checked_out_at: null, on_break: u.id === 'u-ahmed', break_log: [],
+  }))
+
+export const SEED_CALL_ATTEMPTS: import('./types').CallAttempt[] = [
+  { id: 'ca-1', lead_id: 'ld-3', agent_id: 'u-ahmed', agent_name: 'Ahmed Hassan', stage: 'telesales', attempt_number: 1, outcome: 'no_answer', callback_at: null, notes: 'No answer, will retry', called_at: daysAgo(1) },
+]
 
 export const SEED_COMMENTS: LeadComment[] = [
   { id: 'cm-1', lead_id: 'ld-1', author_id: 'u-ahmed', author_name: 'Ahmed Hassan', body: 'Called the customer, interested in Alexandria villas. Asked to call back next week.', created_at: daysAgo(2) },

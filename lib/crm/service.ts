@@ -14,14 +14,17 @@
 
 import {
   SEED_STATUSES, SEED_PROJECTS, SEED_TEAMS, SEED_USERS, SEED_LEADS,
-  SEED_COMMENTS, SEED_REMINDERS, SEED_DISTRIBUTIONS,
+  SEED_COMMENTS, SEED_REMINDERS, SEED_DISTRIBUTIONS, SEED_ATTENDANCE, SEED_CALL_ATTEMPTS,
+  makeLead,
 } from './mock-data'
 import type {
   LeadStatus, Project, Team, CrmUser, CrmLead, LeadComment, LeadReminder,
   LeadHistoryEntry, DistributionSchedule, LeadFilter, WhatsAppMessage,
+  Attendance, CallAttempt, CallStage, CallOutcome, Disposition, LeadStage,
 } from './types'
 
-const KEY = 'qualex-crm-v2'
+// v3: added pipeline fields — bump the key so old localStorage reseeds cleanly.
+const KEY = 'qualex-crm-v3'
 
 interface Store {
   statuses: LeadStatus[]
@@ -34,6 +37,8 @@ interface Store {
   distributions: DistributionSchedule[]
   history: LeadHistoryEntry[]
   whatsapp: WhatsAppMessage[]
+  attendance: Attendance[]
+  callAttempts: CallAttempt[]
 }
 
 function seed(): Store {
@@ -46,6 +51,8 @@ function seed(): Store {
     comments: structuredClone(SEED_COMMENTS),
     reminders: structuredClone(SEED_REMINDERS),
     distributions: structuredClone(SEED_DISTRIBUTIONS),
+    attendance: structuredClone(SEED_ATTENDANCE),
+    callAttempts: structuredClone(SEED_CALL_ATTEMPTS),
     history: SEED_LEADS.map((l) => ({
       id: `h-${l.id}`, lead_id: l.id, at: l.created_at,
       actor_name: 'System', type: 'created' as const, detail: 'Lead created',
@@ -181,9 +188,9 @@ export async function listLeads(filter: LeadFilter = {}): Promise<CrmLead[]> {
   return delay(leads.sort((a, b) => b.created_at.localeCompare(a.created_at)))
 }
 
-export async function createLead(input: Omit<CrmLead, 'id' | 'created_at' | 'updated_at'>): Promise<CrmLead> {
+export async function createLead(input: Partial<CrmLead> & { name: string; phone: string }): Promise<CrmLead> {
   const s = read()
-  const lead: CrmLead = { ...input, id: uid(), created_at: now(), updated_at: now() }
+  const lead = makeLead({ ...input, id: uid(), created_at: now(), updated_at: now() })
   s.leads.push(lead)
   s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: 'System', type: 'created', detail: 'Lead created' })
   write(s)
@@ -191,10 +198,10 @@ export async function createLead(input: Omit<CrmLead, 'id' | 'created_at' | 'upd
 }
 
 /** Bulk import (from CSV/manual list). */
-export async function importLeads(rows: Omit<CrmLead, 'id' | 'created_at' | 'updated_at'>[]): Promise<number> {
+export async function importLeads(rows: (Partial<CrmLead> & { name: string; phone: string })[]): Promise<number> {
   const s = read()
   for (const row of rows) {
-    const lead: CrmLead = { ...row, id: uid(), created_at: now(), updated_at: now() }
+    const lead = makeLead({ ...row, id: uid(), created_at: now(), updated_at: now() })
     s.leads.push(lead)
     s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: 'Import', type: 'created', detail: 'Imported' })
   }
@@ -291,6 +298,9 @@ export async function runDistribution(id: string, actorName: string): Promise<nu
     const batch = pool.splice(0, dist.per_user_count)
     for (const lead of batch) {
       lead.assigned_user_id = userId
+      lead.assigned_telesales_agent = userId
+      if (lead.stage === 'new') lead.stage = 'telesales_assigned'
+      lead.tele_sla_due_at = new Date(Date.now() + 4 * 3600_000).toISOString()
       lead.updated_at = now()
       s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: actorName, type: 'assignment', detail: `Auto-distributed to ${s.users.find((u) => u.id === userId)?.full_name ?? userId}` })
       assigned++
@@ -314,4 +324,145 @@ export async function sendWhatsApp(leadId: string, body: string): Promise<WhatsA
   s.whatsapp.push(msg)
   write(s)
   return delay(msg)
+}
+
+// ================================================================
+// PIPELINE: Telesales → Direct Sales → Credit
+// ================================================================
+const slaDue = (hours: number) => new Date(Date.now() + hours * 3600_000).toISOString()
+const SLA_TELE_HOURS = 4
+const SLA_DS_HOURS = 24
+
+function patchLead(s: Store, leadId: string, patch: Partial<CrmLead>) {
+  s.leads = s.leads.map((l) => (l.id === leadId ? { ...l, ...patch, updated_at: now() } : l))
+}
+function logHistory(s: Store, leadId: string, actor: string, type: LeadHistoryEntry['type'], detail: string) {
+  s.history.push({ id: uid(), lead_id: leadId, at: now(), actor_name: actor, type, detail })
+}
+
+/** Supervisor assigns a lead to a telesales agent. */
+export async function assignTelesales(leadId: string, agentId: string, actor: string): Promise<void> {
+  const s = read()
+  const agent = s.users.find((u) => u.id === agentId)
+  patchLead(s, leadId, { stage: 'telesales_assigned', assigned_telesales_agent: agentId, assigned_user_id: agentId, tele_sla_due_at: slaDue(SLA_TELE_HOURS), tele_sla_breached: false })
+  logHistory(s, leadId, actor, 'assignment', `Assigned to telesales ${agent?.full_name ?? agentId}`)
+  write(s); return delay(undefined)
+}
+
+/** DS supervisor assigns a qualified lead to a direct sales agent. */
+export async function assignDirectSales(leadId: string, agentId: string, actor: string): Promise<void> {
+  const s = read()
+  const agent = s.users.find((u) => u.id === agentId)
+  patchLead(s, leadId, { stage: 'ds_assigned', assigned_direct_sales_agent: agentId, assigned_user_id: agentId, direct_sales_assigned_at: now(), ds_sla_due_at: slaDue(SLA_DS_HOURS), ds_sla_breached: false })
+  logHistory(s, leadId, actor, 'assignment', `Assigned to direct sales ${agent?.full_name ?? agentId}`)
+  write(s); return delay(undefined)
+}
+
+export interface QualificationInput {
+  salary_bracket?: string; down_payment_bracket?: string
+  financing_program?: CrmLead['financing_program']; car_source?: CrmLead['car_source']
+  knows_specific_car?: boolean; occupation?: string; customer_national_id?: string
+  requested_car_brand?: string; requested_car_year?: number
+}
+
+/** Telesales qualifies a lead → moves to DS supervisor's unassigned queue. */
+export async function qualifyLead(leadId: string, qual: QualificationInput, actor: string): Promise<void> {
+  const s = read()
+  patchLead(s, leadId, { ...qual, stage: 'qualified', tele_disposition: 'qualified', telesales_qualified_at: now(), assigned_user_id: null })
+  logHistory(s, leadId, actor, 'status_change', 'Qualified by telesales → sent to Direct Sales')
+  write(s); return delay(undefined)
+}
+
+/** Apply a disposition at either stage (mirrors the old pipeline transitions). */
+export async function setDisposition(leadId: string, stage: CallStage, disposition: Disposition, notes: string, actor: string): Promise<void> {
+  const s = read()
+  const patch: Partial<CrmLead> = {}
+  let to: LeadStage | null = null
+  if (stage === 'telesales') {
+    patch.tele_disposition = disposition
+    if (disposition === 'unqualified') { to = 'unqualified'; patch.unqualification_reason = notes }
+    else if (disposition === 'terminated') to = 'terminated'
+    else if (disposition === 'retired') to = 'retired'
+    else if (disposition === 'no_answer') to = 'telesales_in_progress'
+  } else {
+    patch.ds_disposition = disposition
+    if (disposition === 'unqualified') { to = 'rejected'; patch.unqualification_reason = notes }
+    else if (disposition === 'terminated') to = 'terminated'
+    else if (disposition === 'retired') to = 'retired'
+    else if (disposition === 'no_answer') to = 'ds_in_progress'
+  }
+  if (to) patch.stage = to
+  patchLead(s, leadId, patch)
+  if (to) logHistory(s, leadId, actor, 'status_change', `Disposition: ${disposition}${notes ? ` — ${notes}` : ''}`)
+  write(s); return delay(undefined)
+}
+
+// ---- call attempts (with 3-consecutive-no-answer auto-close) ----
+export async function listCallAttempts(leadId: string, stage: CallStage): Promise<CallAttempt[]> {
+  return delay(read().callAttempts.filter((c) => c.lead_id === leadId && c.stage === stage).sort((a, b) => a.attempt_number - b.attempt_number))
+}
+
+export async function logCallAttempt(
+  leadId: string, stage: CallStage, outcome: CallOutcome,
+  callbackAt: string | null, notes: string | null, agentId: string, agentName: string,
+): Promise<{ ok: boolean; unreachable?: boolean; error?: string }> {
+  const s = read()
+  const list = s.callAttempts.filter((c) => c.lead_id === leadId && c.stage === stage).sort((a, b) => a.attempt_number - b.attempt_number)
+  let streak = 0
+  for (let i = list.length - 1; i >= 0; i--) { if (list[i].outcome === 'no_answer') streak++; else break }
+  if (streak >= 3) return delay({ ok: false, error: 'Customer unreachable after 3 consecutive no-answers.' })
+
+  const nextNo = (list[list.length - 1]?.attempt_number ?? 0) + 1
+  s.callAttempts.push({ id: uid(), lead_id: leadId, agent_id: agentId, agent_name: agentName, stage, attempt_number: nextNo, outcome, callback_at: callbackAt, notes, called_at: now() })
+
+  const newStreak = outcome === 'no_answer' ? streak + 1 : 0
+  let unreachable = false
+  if (outcome === 'no_answer' && newStreak >= 3) {
+    patchLead(s, leadId, { stage: 'unreachable' })
+    logHistory(s, leadId, agentName, 'status_change', 'Closed as unreachable after 3 consecutive no-answers')
+    unreachable = true
+  } else {
+    patchLead(s, leadId, { stage: stage === 'telesales' ? 'telesales_in_progress' : 'ds_in_progress' })
+  }
+  logHistory(s, leadId, agentName, 'contact', `Call attempt ${nextNo}: ${outcome}${notes ? ` — ${notes}` : ''}`)
+  write(s); return delay({ ok: true, unreachable })
+}
+
+// ---- attendance ----
+function today() { return new Date().toISOString().slice(0, 10) }
+export async function getAttendance(userId: string): Promise<Attendance> {
+  const s = read()
+  let a = s.attendance.find((x) => x.user_id === userId && x.date === today())
+  if (!a) { a = { user_id: userId, date: today(), checked_in: false, checked_in_at: null, checked_out: false, checked_out_at: null, on_break: false, break_log: [] }; s.attendance.push(a); write(s) }
+  return delay(a)
+}
+export async function listAttendance(): Promise<Attendance[]> {
+  return delay(read().attendance.filter((a) => a.date === today()))
+}
+async function mutateAttendance(userId: string, fn: (a: Attendance) => void): Promise<void> {
+  const s = read()
+  let a = s.attendance.find((x) => x.user_id === userId && x.date === today())
+  if (!a) { a = { user_id: userId, date: today(), checked_in: false, checked_in_at: null, checked_out: false, checked_out_at: null, on_break: false, break_log: [] }; s.attendance.push(a) }
+  fn(a)
+  write(s); return delay(undefined)
+}
+export const checkIn = (userId: string) => mutateAttendance(userId, (a) => { a.checked_in = true; a.checked_in_at = now(); a.checked_out = false; a.checked_out_at = null })
+export const checkOut = (userId: string) => mutateAttendance(userId, (a) => { a.checked_out = true; a.checked_out_at = now(); a.on_break = false })
+export const startBreak = (userId: string) => mutateAttendance(userId, (a) => { a.on_break = true; a.break_log.push({ started_at: now(), ended_at: null }) })
+export const endBreak = (userId: string) => mutateAttendance(userId, (a) => { a.on_break = false; const last = a.break_log[a.break_log.length - 1]; if (last && !last.ended_at) last.ended_at = now() })
+
+// ---- credit decision ----
+export async function recordCreditDecision(leadId: string, decision: 'approved' | 'rejected', note: string, actor: string): Promise<void> {
+  const s = read()
+  patchLead(s, leadId, { stage: decision, ds_disposition: decision === 'approved' ? 'qualified' : 'unqualified', unqualification_reason: decision === 'rejected' ? (note || 'Credit rejected') : null })
+  logHistory(s, leadId, actor, 'status_change', `Credit ${decision}${note ? ` — ${note}` : ''}`)
+  write(s); return delay(undefined)
+}
+
+/** Update arbitrary lead fields (qualification edits, doc URL, etc.). */
+export async function updateLead(leadId: string, patch: Partial<CrmLead>, actor?: string, detail?: string): Promise<void> {
+  const s = read()
+  patchLead(s, leadId, patch)
+  if (actor && detail) logHistory(s, leadId, actor, 'status_change', detail)
+  write(s); return delay(undefined)
 }

@@ -81,6 +81,27 @@ export interface LeadHistoryEntry {
   detail: string
 }
 
+// ---- Pipeline (Telesales → Direct Sales → Credit) ----
+export type LeadStage =
+  | 'new'
+  | 'telesales_assigned'
+  | 'telesales_in_progress'
+  | 'qualified'
+  | 'unqualified'
+  | 'ds_assigned'
+  | 'ds_in_progress'
+  | 'id_collected'
+  | 'credit_submitted'
+  | 'approved'
+  | 'rejected'
+  | 'unreachable'
+  | 'retired'
+  | 'terminated'
+
+export type Disposition = 'qualified' | 'unqualified' | 'no_answer' | 'terminated' | 'retired'
+export type FinancingProgram = 'new_car' | 'used_car' | 'collateral'
+export type CarSource = 'dealer' | 'individual_c2c' | 'undecided'
+
 export interface CrmLead {
   id: string
   name: string
@@ -88,11 +109,76 @@ export interface CrmLead {
   facebook_url: string | null
   channel: LeadChannel
   project_id: string | null
-  status_id: string | null
+  status_id: string | null // dynamic sub-status / disposition chip
+  // active owner in the CURRENT stage (TS agent, then DS agent)
   assigned_user_id: string | null
   created_at: string
   updated_at: string
-  expire_note: string | null // e.g. "You Locked It"
+  expire_note: string | null
+
+  // pipeline
+  stage: LeadStage
+  assigned_telesales_agent: string | null
+  assigned_direct_sales_agent: string | null
+  tele_disposition: Disposition | null
+  ds_disposition: Disposition | null
+  telesales_qualified_at: string | null
+  direct_sales_assigned_at: string | null
+
+  // SLA
+  tele_sla_due_at: string | null
+  tele_sla_breached: boolean
+  ds_sla_due_at: string | null
+  ds_sla_breached: boolean
+
+  // qualification (captured by telesales, used by DS + credit)
+  salary_bracket: string | null
+  down_payment_bracket: string | null
+  financing_program: FinancingProgram | null
+  car_source: CarSource | null
+  knows_specific_car: boolean | null
+  occupation: string | null
+  customer_national_id: string | null
+  requested_car_brand: string | null
+  requested_car_year: number | null
+  id_document_url: string | null
+  unqualification_reason: string | null
+
+  // duplicate detection
+  is_duplicate: boolean
+  duplicate_of: string | null
+}
+
+export type CallStage = 'telesales' | 'direct_sales'
+export type CallOutcome = 'answered' | 'no_answer' | 'callback_scheduled'
+
+export interface CallAttempt {
+  id: string
+  lead_id: string
+  agent_id: string
+  agent_name: string
+  stage: CallStage
+  attempt_number: number
+  outcome: CallOutcome
+  callback_at: string | null
+  notes: string | null
+  called_at: string
+}
+
+export interface BreakLogEntry {
+  started_at: string
+  ended_at: string | null
+}
+
+export interface Attendance {
+  user_id: string
+  date: string // YYYY-MM-DD
+  checked_in: boolean
+  checked_in_at: string | null
+  checked_out: boolean
+  checked_out_at: string | null
+  on_break: boolean
+  break_log: BreakLogEntry[]
 }
 
 export interface LeadReminder {
