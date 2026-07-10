@@ -25,6 +25,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/login') ||
     pathname.startsWith('/forgot-password') ||
     pathname.startsWith('/reset-password') ||
+    pathname.startsWith('/crm') ||
     pathname.startsWith('/api/')
   ) {
     return NextResponse.next()
