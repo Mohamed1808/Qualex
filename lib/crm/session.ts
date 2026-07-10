@@ -18,8 +18,12 @@ export function isManager(role: UserRole): boolean {
 }
 
 export function roleHome(role: UserRole): string {
-  // Managers land on all-leads management; agents land on their scoped queue.
-  return isManager(role) ? '/crm/leads' : '/crm/sales'
+  switch (role) {
+    case 'telesales_supervisor': return '/crm/telesales/queue'
+    case 'direct_sales_supervisor': return '/crm/direct-sales/queue'
+    case 'admin': return '/crm/leads'
+    default: return '/crm/sales' // agents
+  }
 }
 
 export function getCurrentUserId(): string | null {

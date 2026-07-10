@@ -7,6 +7,7 @@ import {
   listLeads, listStatuses, listProjects, updateLeadStatus, scheduleReminder, logContact,
 } from '@/lib/crm/service'
 import LeadHistoryDrawer from './LeadHistoryDrawer'
+import LeadWorkDrawer from './LeadWorkDrawer'
 import { useSession } from '@/lib/crm/session'
 
 function fmtDate(iso: string) {
@@ -19,7 +20,7 @@ function waLink(phone: string) {
 
 export default function SalesDashboard() {
   const { user, isManager } = useSession()
-  const CURRENT = { id: user.id, name: user.full_name }
+  const CURRENT = { id: user.id, name: user.full_name, role: user.role }
   // Sales agents see only their own leads; managers see everything.
   const scope = isManager ? {} : { assigned_user_id: user.id }
 
@@ -36,6 +37,7 @@ export default function SalesDashboard() {
 
   const [reminderFor, setReminderFor] = useState<CrmLead | null>(null)
   const [historyFor, setHistoryFor] = useState<CrmLead | null>(null)
+  const [workFor, setWorkFor] = useState<CrmLead | null>(null)
 
   async function reload() {
     const [l, s, p] = await Promise.all([
@@ -246,9 +248,11 @@ export default function SalesDashboard() {
                       </select>
                     </td>
                     <td className="px-3 py-3 text-xs text-[#9CA3AF]">{lead.expire_note ?? '—'}</td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <button onClick={() => setWorkFor(lead)}
+                        className="text-xs font-medium text-white bg-[#5757e6] hover:bg-[#4444cc] rounded px-2.5 py-1 mr-2">Work</button>
                       <button onClick={() => setHistoryFor(lead)}
-                        className="text-xs text-[#5757e6] hover:underline">View</button>
+                        className="text-xs text-[#5757e6] hover:underline">History</button>
                     </td>
                   </tr>
                 )
@@ -264,6 +268,11 @@ export default function SalesDashboard() {
       )}
       {historyFor && (
         <LeadHistoryDrawer lead={historyFor} currentUser={CURRENT} onClose={() => { setHistoryFor(null); reload() }} />
+      )}
+      {workFor && (
+        <LeadWorkDrawer lead={workFor} currentUser={CURRENT}
+          onChanged={() => { reload(); listLeads(scope).then(setAllLeads) }}
+          onClose={() => setWorkFor(null)} />
       )}
     </div>
   )

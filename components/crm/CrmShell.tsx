@@ -12,9 +12,18 @@ type Audience = 'agent' | 'ts_sup' | 'ds_sup' | 'admin'
 // which roles see each item
 const NAV: { href: string; label: string; icon: string; audiences: Audience[] }[] = [
   { href: '/crm/sales', label: 'My Queue', icon: '🏠', audiences: ['agent'] },
+  // Telesales supervisor
+  { href: '/crm/telesales/queue', label: 'Telesales Queue', icon: '📞', audiences: ['ts_sup'] },
+  { href: '/crm/telesales/analytics', label: 'Analytics', icon: '📊', audiences: ['ts_sup'] },
+  // Direct sales supervisor
+  { href: '/crm/direct-sales/queue', label: 'Direct Sales Queue', icon: '🤝', audiences: ['ds_sup'] },
+  { href: '/crm/direct-sales/analytics', label: 'Analytics', icon: '📊', audiences: ['ds_sup'] },
+  // Shared supervisor tools
+  { href: '/crm/attendance', label: 'Attendance', icon: '✅', audiences: ['ts_sup', 'ds_sup', 'admin'] },
+  { href: '/crm/duplicates', label: 'Duplicates', icon: '🔁', audiences: ['ts_sup', 'ds_sup', 'admin'] },
   { href: '/crm/leads', label: 'Lead Management', icon: '❄️', audiences: ['ts_sup', 'ds_sup', 'admin'] },
   { href: '/crm/assign', label: 'Assign & Distribute', icon: '🎯', audiences: ['ts_sup', 'admin'] },
-  { href: '/crm/credit', label: 'Credit Decisions', icon: '🏦', audiences: ['admin'] },
+  { href: '/crm/credit', label: 'Credit Decisions', icon: '🏦', audiences: ['ds_sup', 'admin'] },
   { href: '/crm/projects', label: 'Project Management', icon: '🏗️', audiences: ['ts_sup', 'ds_sup', 'admin'] },
   { href: '/crm/teams', label: 'Team Management', icon: '👥', audiences: ['admin'] },
   { href: '/crm/users', label: 'User Management', icon: '🧑‍💼', audiences: ['admin'] },
