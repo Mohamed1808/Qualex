@@ -4,11 +4,10 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import type { CrmUser } from '@/lib/crm/types'
 import { listUsers, updateUser } from '@/lib/crm/service'
-
-// The signed-in admin (frontend demo).
-const CURRENT_ID = 'u-admin'
+import { useSession } from '@/lib/crm/session'
 
 export default function ProfileTab() {
+  const { user } = useSession()
   const [me, setMe] = useState<CrmUser | null>(null)
   const [full_name, setName] = useState('')
   const [title, setTitle] = useState('')
@@ -16,10 +15,10 @@ export default function ProfileTab() {
 
   useEffect(() => {
     listUsers().then((us) => {
-      const u = us.find((x) => x.id === CURRENT_ID) ?? us[0]
+      const u = us.find((x) => x.id === user.id) ?? us[0]
       setMe(u); setName(u.full_name); setTitle(u.title ?? '')
     })
-  }, [])
+  }, [user.id])
 
   if (!me) return <div className="p-6 text-[#6B7280]">Loading…</div>
 

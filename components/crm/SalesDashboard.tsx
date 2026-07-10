@@ -7,9 +7,7 @@ import {
   listLeads, listStatuses, listProjects, updateLeadStatus, scheduleReminder, logContact,
 } from '@/lib/crm/service'
 import LeadHistoryDrawer from './LeadHistoryDrawer'
-
-// Frontend demo: the "signed-in" sales agent. Backend replaces with the real session.
-const CURRENT = { id: 'u-bahr', name: 'Mohamed Bahr' }
+import { useSession } from '@/lib/crm/session'
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-CA') // YYYY-MM-DD
@@ -20,6 +18,11 @@ function waLink(phone: string) {
 }
 
 export default function SalesDashboard() {
+  const { user, isManager } = useSession()
+  const CURRENT = { id: user.id, name: user.full_name }
+  // Sales agents see only their own leads; managers see everything.
+  const scope = isManager ? {} : { assigned_user_id: user.id }
+
   const [leads, setLeads] = useState<CrmLead[]>([])
   const [statuses, setStatuses] = useState<LeadStatus[]>([])
   const [projects, setProjects] = useState<Project[]>([])
@@ -36,7 +39,7 @@ export default function SalesDashboard() {
 
   async function reload() {
     const [l, s, p] = await Promise.all([
-      listLeads({ ...filter, search: search || undefined }),
+      listLeads({ ...scope, ...filter, search: search || undefined }),
       listStatuses(),
       listProjects(),
     ])
@@ -49,14 +52,14 @@ export default function SalesDashboard() {
   useEffect(() => {
     reload()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, search])
+  }, [filter, search, user.id])
 
   const statusById = useMemo(() => Object.fromEntries(statuses.map((s) => [s.id, s])), [statuses])
   const projectById = useMemo(() => Object.fromEntries(projects.map((p) => [p.id, p])), [projects])
 
   // Statistics: counts per status across the (unfiltered by search) full set
   const [allLeads, setAllLeads] = useState<CrmLead[]>([])
-  useEffect(() => { listLeads().then(setAllLeads) }, [])
+  useEffect(() => { listLeads(scope).then(setAllLeads) }, [user.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     for (const l of allLeads) if (l.status_id) counts[l.status_id] = (counts[l.status_id] ?? 0) + 1
@@ -69,7 +72,7 @@ export default function SalesDashboard() {
     await updateLeadStatus(lead.id, statusId, CURRENT.name)
     toast.success('Status updated')
     reload()
-    listLeads().then(setAllLeads)
+    listLeads(scope).then(setAllLeads)
   }
 
   return (
@@ -257,7 +260,7 @@ export default function SalesDashboard() {
       </section>
 
       {reminderFor && (
-        <ReminderModal lead={reminderFor} onClose={() => setReminderFor(null)} />
+        <ReminderModal lead={reminderFor} current={CURRENT} onClose={() => setReminderFor(null)} />
       )}
       {historyFor && (
         <LeadHistoryDrawer lead={historyFor} currentUser={CURRENT} onClose={() => { setHistoryFor(null); reload() }} />
@@ -266,14 +269,14 @@ export default function SalesDashboard() {
   )
 }
 
-function ReminderModal({ lead, onClose }: { lead: CrmLead; onClose: () => void }) {
+function ReminderModal({ lead, current, onClose }: { lead: CrmLead; current: { id: string; name: string }; onClose: () => void }) {
   const [at, setAt] = useState('')
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
   async function save() {
     if (!at) { toast.error('Pick a date & time'); return }
     setSaving(true)
-    await scheduleReminder(CURRENT.id, lead.id, new Date(at).toISOString(), note)
+    await scheduleReminder(current.id, lead.id, new Date(at).toISOString(), note)
     setSaving(false)
     toast.success('Reminder scheduled')
     onClose()
