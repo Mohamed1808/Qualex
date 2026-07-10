@@ -54,17 +54,17 @@ export default function LeadManagement() {
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-white">Lead Management</h1>
+          <h1 className="text-xl font-semibold text-[#111827]">Lead Management</h1>
           <p className="text-sm text-[#6B7280] mt-0.5">{leads.length} leads</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={exportCsv} className="border border-[#2a2a2a] text-[#9CA3AF] hover:text-white text-sm rounded-lg px-4 py-2">⬇ Export CSV</button>
+          <button onClick={exportCsv} className="border border-[#e5e7eb] text-[#4B5563] hover:text-[#111827] text-sm rounded-lg px-4 py-2">⬇ Export CSV</button>
           <button onClick={() => setAdding(true)} className="bg-[#5757e6] hover:bg-[#4444cc] text-white text-sm font-medium rounded-lg px-4 py-2">+ Add Leads</button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl p-4 grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-4 grid grid-cols-2 md:grid-cols-5 gap-3">
         <input type="date" value={filter.from?.slice(0, 10) ?? ''} onChange={(e) => setFilter((f) => ({ ...f, from: e.target.value ? new Date(e.target.value).toISOString() : undefined }))} className={sel} />
         <input type="date" value={filter.to?.slice(0, 10) ?? ''} onChange={(e) => setFilter((f) => ({ ...f, to: e.target.value ? new Date(e.target.value + 'T23:59:59').toISOString() : undefined }))} className={sel} />
         <select value={filter.status_id ?? ''} onChange={(e) => setFilter((f) => ({ ...f, status_id: e.target.value || undefined }))} className={sel}>
@@ -77,15 +77,15 @@ export default function LeadManagement() {
           <option value="">All agents</option>{agents.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
         </select>
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or phone…" className={`${sel} col-span-2 md:col-span-4`} />
-        <button onClick={() => { setFilter({}); setSearch('') }} className="text-xs text-[#5757e6] hover:text-[#7d7dee]">Reset</button>
+        <button onClick={() => { setFilter({}); setSearch('') }} className="text-xs text-[#5757e6] hover:text-[#4444cc]">Reset</button>
       </div>
 
       {/* Table */}
-      <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl overflow-hidden">
+      <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#2a2a2a] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
+              <tr className="border-b border-[#e5e7eb] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
                 <th className="px-4 py-3">Date</th><th className="px-4 py-3">Name</th><th className="px-4 py-3">Phone</th>
                 <th className="px-4 py-3">Project</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Assigned</th><th className="px-4 py-3">History</th>
               </tr>
@@ -94,20 +94,20 @@ export default function LeadManagement() {
               {leads.map((l) => {
                 const status = l.status_id ? statusById[l.status_id] : undefined
                 return (
-                  <tr key={l.id} className="border-b border-[#2a2a2a] last:border-0 hover:bg-[#1c1c22] transition-colors">
-                    <td className="px-4 py-3 text-[#9CA3AF] text-xs whitespace-nowrap">{new Date(l.created_at).toLocaleDateString('en-CA')}</td>
-                    <td className="px-4 py-3 text-white">{l.name}</td>
-                    <td className="px-4 py-3 text-[#9CA3AF] font-mono text-xs">{l.phone}</td>
-                    <td className="px-4 py-3 text-xs text-[#9CA3AF]">{projectById[l.project_id ?? '']?.name ?? '—'}</td>
+                  <tr key={l.id} className="border-b border-[#e5e7eb] last:border-0 hover:bg-[#f3f4f6] transition-colors">
+                    <td className="px-4 py-3 text-[#4B5563] text-xs whitespace-nowrap">{new Date(l.created_at).toLocaleDateString('en-CA')}</td>
+                    <td className="px-4 py-3 text-[#111827]">{l.name}</td>
+                    <td className="px-4 py-3 text-[#4B5563] font-mono text-xs">{l.phone}</td>
+                    <td className="px-4 py-3 text-xs text-[#4B5563]">{projectById[l.project_id ?? '']?.name ?? '—'}</td>
                     <td className="px-4 py-3">
                       <select value={l.status_id ?? ''} onChange={async (e) => { await updateLeadStatus(l.id, e.target.value, ACTOR.name); reload() }}
-                        className="bg-[#1c1c22] border border-[#2a2a2a] rounded-lg px-2 py-1 text-xs focus:outline-none" style={{ color: status?.color ?? '#9CA3AF' }}>
-                        {statuses.map((s) => <option key={s.id} value={s.id} style={{ color: '#fff', backgroundColor: '#1c1c22' }}>{s.name}</option>)}
+                        className="bg-[#f3f4f6] border border-[#e5e7eb] rounded-lg px-2 py-1 text-xs focus:outline-none" style={{ color: status?.color ?? '#4B5563' }}>
+                        {statuses.map((s) => <option key={s.id} value={s.id} style={{ color: '#fff', backgroundColor: '#f3f4f6' }}>{s.name}</option>)}
                       </select>
                     </td>
                     <td className="px-4 py-3">
                       <select value={l.assigned_user_id ?? ''} onChange={async (e) => { await assignLead(l.id, e.target.value || null, ACTOR.name); reload() }}
-                        className="bg-[#1c1c22] border border-[#2a2a2a] text-white rounded-lg px-2 py-1 text-xs focus:outline-none">
+                        className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] rounded-lg px-2 py-1 text-xs focus:outline-none">
                         <option value="">Unassigned</option>
                         {agents.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
                       </select>
@@ -171,12 +171,12 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl w-full max-w-lg p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl w-full max-w-lg p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-white">Add Leads</h3>
-          <button onClick={onClose} className="text-[#6B7280] hover:text-white">✕</button>
+          <h3 className="text-sm font-semibold text-[#111827]">Add Leads</h3>
+          <button onClick={onClose} className="text-[#6B7280] hover:text-[#111827]">✕</button>
         </div>
-        <div className="flex gap-1 mb-4 border-b border-[#2a2a2a]">
+        <div className="flex gap-1 mb-4 border-b border-[#e5e7eb]">
           {(['manual', 'import'] as const).map((m) => (
             <button key={m} onClick={() => setMode(m)} className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px capitalize ${mode === m ? 'text-[#5757e6] border-[#5757e6]' : 'text-[#6B7280] border-transparent'}`}>{m}</button>
           ))}
@@ -198,9 +198,9 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
           </div>
         ) : (
           <div>
-            <p className="text-xs text-[#9CA3AF] mb-3">Upload a CSV with <span className="text-white font-mono">name, phone</span> columns (optional <span className="font-mono">facebook</span>). Leads go into the selected project.</p>
+            <p className="text-xs text-[#4B5563] mb-3">Upload a CSV with <span className="text-[#111827] font-mono">name, phone</span> columns (optional <span className="font-mono">facebook</span>). Leads go into the selected project.</p>
             <input ref={fileRef} type="file" accept=".csv" onChange={onFile}
-              className="block w-full text-xs text-[#9CA3AF] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#5757e6] file:text-white file:text-sm file:cursor-pointer" />
+              className="block w-full text-xs text-[#4B5563] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#5757e6] file:text-white file:text-sm file:cursor-pointer" />
           </div>
         )}
       </div>
@@ -208,5 +208,5 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
   )
 }
 
-const sel = 'w-full mt-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]'
+const sel = 'w-full mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]'
 const lbl = 'text-[10px] text-[#6B7280] uppercase tracking-wide'

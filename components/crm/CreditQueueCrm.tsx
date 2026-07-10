@@ -29,31 +29,31 @@ export default function CreditQueueCrm() {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-white">Credit Decisions</h1>
+        <h1 className="text-xl font-semibold text-[#111827]">Credit Decisions</h1>
         <p className="text-sm text-[#6B7280] mt-0.5">{leads.length} awaiting a decision</p>
       </div>
       {leads.length === 0 ? (
-        <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl py-16 text-center text-[#4B5563] text-sm">Nothing awaiting credit.</div>
+        <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl py-16 text-center text-[#4B5563] text-sm">Nothing awaiting credit.</div>
       ) : leads.map((l) => (
-        <div key={l.id} className="bg-[#161616] border border-[#2a2a2a] rounded-xl p-5">
+        <div key={l.id} className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-white font-medium">{l.name} <span className="text-[#6B7280] font-mono text-xs">{l.phone}</span></p>
+              <p className="text-[#111827] font-medium">{l.name} <span className="text-[#6B7280] font-mono text-xs">{l.phone}</span></p>
             </div>
             {l.id_document_url && <a href={l.id_document_url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#5757e6] hover:underline">📎 ID document</a>}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
             {[['Salary', l.salary_bracket], ['Down payment', l.down_payment_bracket], ['Program', l.financing_program], ['Occupation', l.occupation], ['National ID', l.customer_national_id], ['Car', l.requested_car_brand]].map(([k, v]) => (
-              <div key={k} className="bg-[#1c1c22] rounded-lg px-3 py-2">
+              <div key={k} className="bg-[#f3f4f6] rounded-lg px-3 py-2">
                 <p className="text-[10px] text-[#6B7280] uppercase">{k}</p>
-                <p className="text-xs text-white capitalize">{v || '—'}</p>
+                <p className="text-xs text-[#111827] capitalize">{v || '—'}</p>
               </div>
             ))}
           </div>
           {acting === l.id ? (
-            <div className="mt-4 border-t border-[#2a2a2a] pt-4">
+            <div className="mt-4 border-t border-[#e5e7eb] pt-4">
               <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Decision note (required for rejection)…"
-                className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+                className="w-full bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
               <div className="flex gap-2 mt-3">
                 <button onClick={() => decide(l, 'approved')} className="bg-[#22C55E] hover:bg-[#16A34A] text-white text-sm font-medium rounded-lg px-4 py-2">✓ Approve</button>
                 <button onClick={() => decide(l, 'rejected')} className="bg-[#F26161] hover:bg-[#DC2626] text-white text-sm font-medium rounded-lg px-4 py-2">✕ Reject</button>

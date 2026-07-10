@@ -23,7 +23,7 @@ export default function RootLayout({
   )
 
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <title>Qualex — Drive Finance</title>
         <meta name="description" content="Drive Finance — Automotive Lead Management" />
@@ -31,18 +31,18 @@ export default function RootLayout({
         <meta name="theme-color" content="#5757e6" />
         <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml" />
       </head>
-      <body className="bg-[#0f0f0f] text-white antialiased">
+      <body className="bg-[#f7f8fa] text-[#111827] antialiased">
         <QueryClientProvider client={queryClient}>
           {children}
           <Toaster
             position="top-right"
             richColors
-            theme="dark"
+            theme="light"
             toastOptions={{
               style: {
-                background: '#161616',
-                border: '1px solid #2a2a2a',
-                color: '#f0f0f0',
+                background: '#ffffff',
+                border: '1px solid #e5e7eb',
+                color: '#111827',
               },
             }}
           />

@@ -37,11 +37,11 @@ export default function CrmAnalytics({ team }: { team: 'telesales' | 'direct_sal
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-xl font-semibold text-white">{team === 'telesales' ? 'Telesales' : 'Direct Sales'} Analytics</h1>
+      <h1 className="text-xl font-semibold text-[#111827]">{team === 'telesales' ? 'Telesales' : 'Direct Sales'} Analytics</h1>
 
       <div className="grid grid-cols-4 gap-4">
         {[['Total Leads', kpis.total, '#5757e6'], ['Qualified', kpis.qualified, '#14B8A6'], ['Approved', kpis.approved, '#22C55E'], ['Qual. Rate', `${kpis.qualRate}%`, '#F59E0B']].map(([label, val, color]) => (
-          <div key={label as string} className="bg-[#161616] border border-[#2a2a2a] rounded-xl p-4">
+          <div key={label as string} className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-4">
             <p className="text-xs text-[#6B7280] mb-1">{label as string}</p>
             <p className="text-2xl font-bold" style={{ color: color as string }}>{val as string | number}</p>
           </div>
@@ -49,15 +49,15 @@ export default function CrmAnalytics({ team }: { team: 'telesales' | 'direct_sal
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">Conversion Funnel</h3>
+        <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-[#111827] mb-4">Conversion Funnel</h3>
           <div className="space-y-2">
             {funnel.map((f) => (
               <div key={f.label} className="flex items-center gap-3">
-                <span className="text-xs text-[#9CA3AF] w-40">{f.label}</span>
-                <div className="flex-1 bg-[#1c1c22] rounded-full h-5 overflow-hidden">
+                <span className="text-xs text-[#4B5563] w-40">{f.label}</span>
+                <div className="flex-1 bg-[#f3f4f6] rounded-full h-5 overflow-hidden">
                   <div className="h-5 rounded-full bg-[#5757e6] flex items-center justify-end px-2" style={{ width: `${(f.value / max) * 100}%` }}>
-                    <span className="text-[10px] text-white font-semibold">{f.value}</span>
+                    <span className="text-[10px] text-[#111827] font-semibold">{f.value}</span>
                   </div>
                 </div>
               </div>
@@ -65,13 +65,13 @@ export default function CrmAnalytics({ team }: { team: 'telesales' | 'direct_sal
           </div>
         </div>
 
-        <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">Status Distribution</h3>
+        <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-[#111827] mb-4">Status Distribution</h3>
           <div className="flex flex-wrap gap-2">
             {statuses.map((s) => (
               <div key={s.id} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: `${s.color}12` }}>
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-xs text-[#cbd5e1]">{s.name}</span>
+                <span className="text-xs text-[#374151]">{s.name}</span>
                 <span className="text-xs font-bold" style={{ color: s.color }}>{statusCounts[s.id] ?? 0}</span>
               </div>
             ))}

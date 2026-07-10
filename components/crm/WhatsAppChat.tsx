@@ -40,21 +40,21 @@ export default function WhatsAppChat() {
   return (
     <div className="flex h-full">
       {/* Conversations list */}
-      <div className="w-72 border-r border-[#2a2a2a] flex flex-col bg-[#161616]">
-        <div className="p-4 border-b border-[#2a2a2a]">
-          <h2 className="text-sm font-semibold text-white mb-2">Messages</h2>
+      <div className="w-72 border-r border-[#e5e7eb] flex flex-col bg-[#ffffff]">
+        <div className="p-4 border-b border-[#e5e7eb]">
+          <h2 className="text-sm font-semibold text-[#111827] mb-2">Messages</h2>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search chat"
-            className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+            className="w-full bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
         </div>
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           {filtered.map((l) => {
             const status = l.status_id ? statusById[l.status_id] : undefined
             return (
               <button key={l.id} onClick={() => setActiveId(l.id)}
-                className={`w-full text-left px-4 py-3 border-b border-[#2a2a2a] flex items-center gap-3 transition-colors ${activeId === l.id ? 'bg-[#1c1c22]' : 'hover:bg-[#1c1c22]'}`}>
+                className={`w-full text-left px-4 py-3 border-b border-[#e5e7eb] flex items-center gap-3 transition-colors ${activeId === l.id ? 'bg-[#f3f4f6]' : 'hover:bg-[#f3f4f6]'}`}>
                 <div className="w-9 h-9 rounded-full bg-[#5757e6]/20 flex items-center justify-center text-[#5757e6] text-sm font-bold flex-shrink-0">{l.name.charAt(0)}</div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-white truncate">{l.name}</p>
+                  <p className="text-sm text-[#111827] truncate">{l.name}</p>
                   <p className="text-[10px] truncate" style={{ color: status?.color ?? '#6B7280' }}>{status?.name ?? 'No status'}</p>
                 </div>
               </button>
@@ -64,13 +64,13 @@ export default function WhatsAppChat() {
       </div>
 
       {/* Thread */}
-      <div className="flex-1 flex flex-col bg-[#0f0f0f]">
+      <div className="flex-1 flex flex-col bg-[#f7f8fa]">
         {active ? (
           <>
-            <div className="px-5 py-3 border-b border-[#2a2a2a] bg-[#161616] flex items-center gap-3">
+            <div className="px-5 py-3 border-b border-[#e5e7eb] bg-[#ffffff] flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-[#25D366]/20 flex items-center justify-center text-[#25D366]">💬</div>
               <div>
-                <p className="text-sm text-white font-medium">{active.name} · <span className="font-mono text-xs text-[#9CA3AF]">{active.phone}</span></p>
+                <p className="text-sm text-[#111827] font-medium">{active.name} · <span className="font-mono text-xs text-[#4B5563]">{active.phone}</span></p>
                 <p className="text-[10px] text-[#6B7280]">Company WhatsApp · {COMPANY_WHATSAPP_NUMBER}</p>
               </div>
             </div>
@@ -81,7 +81,7 @@ export default function WhatsAppChat() {
               )}
               {messages.map((m) => (
                 <div key={m.id} className={`flex ${m.direction === 'out' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm ${m.direction === 'out' ? 'bg-[#5757e6] text-white' : 'bg-[#1c1c22] text-[#e5e7eb]'}`}>
+                  <div className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm ${m.direction === 'out' ? 'bg-[#5757e6] text-white' : 'bg-[#f3f4f6] text-[#1f2937]'}`}>
                     {m.body}
                     <span className="block text-[9px] opacity-60 mt-1">{new Date(m.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
@@ -89,10 +89,10 @@ export default function WhatsAppChat() {
               ))}
             </div>
 
-            <div className="p-4 border-t border-[#2a2a2a] bg-[#161616] flex items-center gap-2">
+            <div className="p-4 border-t border-[#e5e7eb] bg-[#ffffff] flex items-center gap-2">
               <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()}
                 placeholder="Type your message here…"
-                className="flex-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-full px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+                className="flex-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-full px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
               <button onClick={send} className="w-10 h-10 rounded-full bg-[#5757e6] hover:bg-[#4444cc] text-white flex items-center justify-center">➤</button>
             </div>
           </>

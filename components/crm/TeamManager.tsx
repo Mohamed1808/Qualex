@@ -35,21 +35,21 @@ export default function TeamManager() {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-white">Team Management</h1>
+        <h1 className="text-xl font-semibold text-[#111827]">Team Management</h1>
         <p className="text-sm text-[#6B7280] mt-0.5">Group agents into teams and assign a leader / supervisor.</p>
       </div>
 
       {/* Add team */}
-      <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl p-5 flex flex-wrap items-end gap-3">
+      <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-5 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[180px]">
           <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">Team name</label>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cairo Team"
-            className="w-full mt-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+            className="w-full mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
         </div>
         <div className="min-w-[180px]">
           <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">Team leader</label>
           <select value={leaderId} onChange={(e) => setLeaderId(e.target.value)}
-            className="w-full mt-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none">
+            className="w-full mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none">
             <option value="">Select leader…</option>
             {supervisors.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
           </select>
@@ -63,18 +63,18 @@ export default function TeamManager() {
           const leader = users.find((u) => u.id === team.leader_id)
           const members = users.filter((u) => u.team_id === team.id)
           return (
-            <div key={team.id} className="bg-[#161616] border border-[#2a2a2a] rounded-xl p-5">
+            <div key={team.id} className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-5">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-white">{team.name}</h3>
+                <h3 className="text-sm font-semibold text-[#111827]">{team.name}</h3>
                 <span className="text-xs text-[#6B7280]">{members.length} members</span>
               </div>
-              <p className="text-xs text-[#9CA3AF] mb-3">
+              <p className="text-xs text-[#4B5563] mb-3">
                 Leader: <span className="text-[#5757e6]">{leader?.full_name ?? '—'}</span>
               </p>
               <div className="space-y-1">
                 {members.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between text-xs bg-[#1c1c22] rounded-lg px-3 py-2">
-                    <span className="text-white">{m.full_name} <span className="text-[#6B7280]">· {m.title}</span></span>
+                  <div key={m.id} className="flex items-center justify-between text-xs bg-[#f3f4f6] rounded-lg px-3 py-2">
+                    <span className="text-[#111827]">{m.full_name} <span className="text-[#6B7280]">· {m.title}</span></span>
                     <button onClick={() => assignMember(m.id, '')} className="text-[#F26161] hover:underline">Remove</button>
                   </div>
                 ))}
@@ -86,14 +86,14 @@ export default function TeamManager() {
       </div>
 
       {/* Unassigned users */}
-      <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-white mb-3">Assign members to teams</h3>
+      <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-[#111827] mb-3">Assign members to teams</h3>
         <div className="space-y-2">
           {users.filter((u) => u.role.includes('agent')).map((u) => (
             <div key={u.id} className="flex items-center justify-between text-sm">
-              <span className="text-[#cbd5e1]">{u.full_name} <span className="text-[#6B7280] text-xs">· {u.title}</span></span>
+              <span className="text-[#374151]">{u.full_name} <span className="text-[#6B7280] text-xs">· {u.title}</span></span>
               <select value={u.team_id ?? ''} onChange={(e) => assignMember(u.id, e.target.value)}
-                className="bg-[#1c1c22] border border-[#2a2a2a] text-white text-xs rounded-lg px-2 py-1 focus:outline-none">
+                className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-xs rounded-lg px-2 py-1 focus:outline-none">
                 <option value="">No team</option>
                 {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>

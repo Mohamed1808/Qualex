@@ -38,16 +38,16 @@ export default function UserManager() {
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-white">User Management</h1>
+          <h1 className="text-xl font-semibold text-[#111827]">User Management</h1>
           <p className="text-sm text-[#6B7280] mt-0.5">{users.length} users</p>
         </div>
         <button onClick={() => setCreating(true)} className="bg-[#5757e6] hover:bg-[#4444cc] text-white text-sm font-medium rounded-lg px-4 py-2">+ New User</button>
       </div>
 
-      <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl overflow-hidden">
+      <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[#2a2a2a] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
+            <tr className="border-b border-[#e5e7eb] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
               <th className="px-4 py-3">User</th>
               <th className="px-4 py-3">Title</th>
               <th className="px-4 py-3">Role</th>
@@ -58,19 +58,19 @@ export default function UserManager() {
           </thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u.id} className="border-b border-[#2a2a2a] last:border-0">
+              <tr key={u.id} className="border-b border-[#e5e7eb] last:border-0">
                 <td className="px-4 py-3">
-                  <p className="text-white font-medium">{u.full_name}</p>
+                  <p className="text-[#111827] font-medium">{u.full_name}</p>
                   <p className="text-xs text-[#6B7280]">{u.email}</p>
                 </td>
-                <td className="px-4 py-3 text-xs text-[#9CA3AF]">{u.title ?? '—'}</td>
+                <td className="px-4 py-3 text-xs text-[#4B5563]">{u.title ?? '—'}</td>
                 <td className="px-4 py-3">
                   <select value={u.role} onChange={(e) => setRole(u, e.target.value as UserRole)}
-                    className="bg-[#1c1c22] border border-[#2a2a2a] text-white text-xs rounded-lg px-2 py-1 focus:outline-none">
+                    className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-xs rounded-lg px-2 py-1 focus:outline-none">
                     {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </td>
-                <td className="px-4 py-3 text-xs text-[#9CA3AF]">{teams.find((t) => t.id === u.team_id)?.name ?? '—'}</td>
+                <td className="px-4 py-3 text-xs text-[#4B5563]">{teams.find((t) => t.id === u.team_id)?.name ?? '—'}</td>
                 <td className="px-4 py-3">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${u.is_active ? 'text-[#22C55E] bg-[#22C55E]/15' : 'text-[#6B7280] bg-[#6B7280]/15'}`}>
                     {u.is_active ? 'Active' : 'Inactive'}
@@ -78,7 +78,7 @@ export default function UserManager() {
                 </td>
                 <td className="px-4 py-3 text-right space-x-3">
                   <button onClick={() => setHistoryFor(u)} className="text-xs text-[#5757e6] hover:underline">History</button>
-                  <button onClick={() => toggle(u)} className="text-xs text-[#9CA3AF] hover:text-white">{u.is_active ? 'Deactivate' : 'Activate'}</button>
+                  <button onClick={() => toggle(u)} className="text-xs text-[#4B5563] hover:text-[#111827]">{u.is_active ? 'Deactivate' : 'Activate'}</button>
                 </td>
               </tr>
             ))}
@@ -89,17 +89,17 @@ export default function UserManager() {
       {creating && <UserForm teams={teams} onClose={() => setCreating(false)} onSaved={() => { setCreating(false); reload() }} />}
       {historyFor && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setHistoryFor(null)}>
-          <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold text-white mb-3">{historyFor.full_name} — Activity</h3>
+          <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold text-[#111827] mb-3">{historyFor.full_name} — Activity</h3>
             <div className="space-y-2 max-h-72 overflow-y-auto scrollbar-thin">
               {historyFor.history.slice().reverse().map((h, i) => (
-                <div key={i} className="text-xs bg-[#1c1c22] rounded-lg px-3 py-2">
-                  <span className="text-white">{h.action}</span>
+                <div key={i} className="text-xs bg-[#f3f4f6] rounded-lg px-3 py-2">
+                  <span className="text-[#111827]">{h.action}</span>
                   <span className="text-[#4B5563] block text-[10px] mt-0.5">{new Date(h.at).toLocaleString()}</span>
                 </div>
               ))}
             </div>
-            <button onClick={() => setHistoryFor(null)} className="mt-4 w-full text-sm text-[#6B7280] hover:text-white border border-[#2a2a2a] rounded-lg py-2">Close</button>
+            <button onClick={() => setHistoryFor(null)} className="mt-4 w-full text-sm text-[#6B7280] hover:text-[#111827] border border-[#e5e7eb] rounded-lg py-2">Close</button>
           </div>
         </div>
       )}
@@ -126,8 +126,8 @@ function UserForm({ teams, onClose, onSaved }: { teams: Team[]; onClose: () => v
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl w-full max-w-lg p-5" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-sm font-semibold text-white mb-4">New User</h3>
+      <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl w-full max-w-lg p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold text-[#111827] mb-4">New User</h3>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Full name"><input value={full_name} onChange={(e) => setName(e.target.value)} className={inputCls} /></Field>
           <Field label="Email"><input value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} /></Field>
@@ -146,14 +146,14 @@ function UserForm({ teams, onClose, onSaved }: { teams: Team[]; onClose: () => v
         </div>
         <div className="flex gap-2 mt-5">
           <button onClick={save} disabled={saving} className="bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white text-sm font-medium rounded-lg px-5 py-2">{saving ? 'Saving…' : 'Create'}</button>
-          <button onClick={onClose} className="px-4 text-sm text-[#6B7280] hover:text-white">Cancel</button>
+          <button onClick={onClose} className="px-4 text-sm text-[#6B7280] hover:text-[#111827]">Cancel</button>
         </div>
       </div>
     </div>
   )
 }
 
-const inputCls = 'w-full mt-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]'
+const inputCls = 'w-full mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]'
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div><label className="text-[10px] text-[#6B7280] uppercase tracking-wide">{label}</label>{children}</div>
 }

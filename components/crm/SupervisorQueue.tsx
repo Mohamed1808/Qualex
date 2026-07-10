@@ -52,26 +52,26 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
 
   return (
     <div className="p-6 space-y-4">
-      <h1 className="text-xl font-semibold text-white">{team === 'telesales' ? 'Telesales' : 'Direct Sales'} Live Queue</h1>
+      <h1 className="text-xl font-semibold text-[#111827]">{team === 'telesales' ? 'Telesales' : 'Direct Sales'} Live Queue</h1>
 
       {/* stage counts */}
       <div className="flex flex-wrap gap-2">
         {STAGES[team].map((st) => (
           <button key={st} onClick={() => setStageFilter((s) => s === st ? '' : st)}
-            className={`text-xs px-3 py-2 rounded-lg border capitalize ${stageFilter === st ? 'border-[#5757e6] text-[#7d7dee] bg-[#5757e6]/10' : 'border-[#2a2a2a] text-[#9CA3AF] hover:border-[#3a3a3a]'}`}>
-            {st.replace(/_/g, ' ')} <span className="font-bold text-white">{counts[st] ?? 0}</span>
+            className={`text-xs px-3 py-2 rounded-lg border capitalize ${stageFilter === st ? 'border-[#5757e6] text-[#4444cc] bg-[#5757e6]/10' : 'border-[#e5e7eb] text-[#4B5563] hover:border-[#d1d5db]'}`}>
+            {st.replace(/_/g, ' ')} <span className="font-bold text-[#111827]">{counts[st] ?? 0}</span>
           </button>
         ))}
       </div>
 
       <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or phone…"
-        className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+        className="w-full bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
 
-      <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl overflow-hidden">
+      <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#2a2a2a] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
+              <tr className="border-b border-[#e5e7eb] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
                 <th className="px-4 py-3">Name</th><th className="px-4 py-3">Phone</th><th className="px-4 py-3">Stage</th>
                 <th className="px-4 py-3">Agent</th><th className="px-4 py-3">Assign</th><th className="px-4 py-3">Actions</th>
               </tr>
@@ -81,20 +81,20 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
                 const agentId = team === 'telesales' ? l.assigned_telesales_agent : l.assigned_direct_sales_agent
                 const agent = users.find((u) => u.id === agentId)
                 return (
-                  <tr key={l.id} className="border-b border-[#2a2a2a] last:border-0 hover:bg-[#1c1c22]">
-                    <td className="px-4 py-3 text-white">{l.name}</td>
-                    <td className="px-4 py-3 text-[#9CA3AF] font-mono text-xs">{l.phone}</td>
-                    <td className="px-4 py-3"><span className="text-xs px-2 py-0.5 rounded-full bg-[#5757e6]/15 text-[#7d7dee] capitalize">{l.stage.replace(/_/g, ' ')}</span></td>
-                    <td className="px-4 py-3 text-xs text-[#9CA3AF]">{agent?.full_name ?? <span className="text-[#F59E0B]">Unassigned</span>}</td>
+                  <tr key={l.id} className="border-b border-[#e5e7eb] last:border-0 hover:bg-[#f3f4f6]">
+                    <td className="px-4 py-3 text-[#111827]">{l.name}</td>
+                    <td className="px-4 py-3 text-[#4B5563] font-mono text-xs">{l.phone}</td>
+                    <td className="px-4 py-3"><span className="text-xs px-2 py-0.5 rounded-full bg-[#5757e6]/15 text-[#4444cc] capitalize">{l.stage.replace(/_/g, ' ')}</span></td>
+                    <td className="px-4 py-3 text-xs text-[#4B5563]">{agent?.full_name ?? <span className="text-[#F59E0B]">Unassigned</span>}</td>
                     <td className="px-4 py-3">
-                      <select value="" onChange={(e) => assign(l, e.target.value)} className="bg-[#1c1c22] border border-[#2a2a2a] text-white text-xs rounded-lg px-2 py-1 focus:outline-none">
+                      <select value="" onChange={(e) => assign(l, e.target.value)} className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-xs rounded-lg px-2 py-1 focus:outline-none">
                         <option value="">{agent ? 'Reassign…' : 'Assign…'}</option>
                         {agents.map((a) => <option key={a.id} value={a.id}>{a.full_name}</option>)}
                       </select>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <button onClick={() => setWorkFor(l)} className="text-xs text-[#5757e6] hover:underline mr-2">Open</button>
-                      <button onClick={() => setHistoryFor(l)} className="text-xs text-[#6B7280] hover:text-white">History</button>
+                      <button onClick={() => setHistoryFor(l)} className="text-xs text-[#6B7280] hover:text-[#111827]">History</button>
                     </td>
                   </tr>
                 )

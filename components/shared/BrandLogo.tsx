@@ -69,7 +69,7 @@ export default function BrandLogo({ variant = 'full', height = 28, className = '
         style={{ fontSize: height * 0.62, color: BRAND }}
       >
         drive
-        <span className="text-white">finance</span>
+        <span className="text-[#111827]">finance</span>
       </span>
     </div>
   )

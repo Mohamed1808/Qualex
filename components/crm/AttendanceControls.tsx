@@ -34,9 +34,9 @@ export default function AttendanceControls({ userId }: { userId: string }) {
         {att.on_break ? 'On break' : 'Available'}
       </span>
       {att.on_break ? (
-        <button onClick={() => act(() => endBreak(userId), 'Break ended')} className="text-xs text-[#9CA3AF] hover:text-white border border-[#2a2a2a] rounded-lg px-2.5 py-1.5">End break</button>
+        <button onClick={() => act(() => endBreak(userId), 'Break ended')} className="text-xs text-[#4B5563] hover:text-[#111827] border border-[#e5e7eb] rounded-lg px-2.5 py-1.5">End break</button>
       ) : (
-        <button onClick={() => act(() => startBreak(userId), 'On break')} className="text-xs text-[#9CA3AF] hover:text-white border border-[#2a2a2a] rounded-lg px-2.5 py-1.5">Break</button>
+        <button onClick={() => act(() => startBreak(userId), 'On break')} className="text-xs text-[#4B5563] hover:text-[#111827] border border-[#e5e7eb] rounded-lg px-2.5 py-1.5">Break</button>
       )}
       <button onClick={() => act(() => checkOut(userId), 'Checked out')} className="text-xs text-[#F26161] hover:bg-[#F26161]/10 border border-[#F26161]/30 rounded-lg px-2.5 py-1.5">Check out</button>
     </div>

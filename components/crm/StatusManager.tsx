@@ -43,23 +43,23 @@ export default function StatusManager() {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-white">Lead Statuses</h1>
+        <h1 className="text-xl font-semibold text-[#111827]">Lead Statuses</h1>
         <p className="text-sm text-[#6B7280] mt-0.5">Add or manage statuses. Changes reflect instantly in the sales portal.</p>
       </div>
 
       {/* Add */}
-      <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl p-5">
-        <h2 className="text-sm font-semibold text-white mb-3">Add new status</h2>
+      <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-5">
+        <h2 className="text-sm font-semibold text-[#111827] mb-3">Add new status</h2>
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex-1 min-w-[180px]">
             <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">Name</label>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Site Visit Booked"
-              className="w-full mt-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+              className="w-full mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
           </div>
           <div>
             <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">Category</label>
             <select value={category} onChange={(e) => setCategory(e.target.value as StatusCategory)}
-              className="mt-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none">
+              className="mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none">
               <option value="open">Open</option>
               <option value="won">Won</option>
               <option value="lost">Lost</option>
@@ -70,7 +70,7 @@ export default function StatusManager() {
             <div className="flex gap-1.5">
               {PALETTE.map((c) => (
                 <button key={c} onClick={() => setColor(c)}
-                  className={`w-6 h-6 rounded-full border-2 ${color === c ? 'border-white' : 'border-transparent'}`}
+                  className={`w-6 h-6 rounded-full border-2 ${color === c ? 'border-[#111827]' : 'border-transparent'}`}
                   style={{ backgroundColor: c }} />
               ))}
             </div>
@@ -83,10 +83,10 @@ export default function StatusManager() {
       </div>
 
       {/* List */}
-      <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl overflow-hidden">
+      <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[#2a2a2a] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
+            <tr className="border-b border-[#e5e7eb] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Category</th>
               <th className="px-4 py-3">State</th>
@@ -95,22 +95,22 @@ export default function StatusManager() {
           </thead>
           <tbody>
             {statuses.map((s) => (
-              <tr key={s.id} className="border-b border-[#2a2a2a] last:border-0">
+              <tr key={s.id} className="border-b border-[#e5e7eb] last:border-0">
                 <td className="px-4 py-3">
                   <span className="inline-flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
-                    <span className="text-white">{s.name}</span>
+                    <span className="text-[#111827]">{s.name}</span>
                     {s.is_default && <span className="text-[10px] text-[#5757e6] bg-[#5757e6]/15 px-1.5 py-0.5 rounded">default</span>}
                   </span>
                 </td>
-                <td className="px-4 py-3 capitalize text-[#9CA3AF] text-xs">{s.category}</td>
+                <td className="px-4 py-3 capitalize text-[#4B5563] text-xs">{s.category}</td>
                 <td className="px-4 py-3">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${s.is_active ? 'text-[#22C55E] bg-[#22C55E]/15' : 'text-[#6B7280] bg-[#6B7280]/15'}`}>
                     {s.is_active ? 'Active' : 'Hidden'}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right space-x-3">
-                  <button onClick={() => toggle(s)} className="text-xs text-[#9CA3AF] hover:text-white">
+                  <button onClick={() => toggle(s)} className="text-xs text-[#4B5563] hover:text-[#111827]">
                     {s.is_active ? 'Hide' : 'Show'}
                   </button>
                   {!s.is_default && (

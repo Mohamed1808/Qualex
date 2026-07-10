@@ -79,13 +79,13 @@ export default function SalesDashboard() {
 
   return (
     <div className="p-6 space-y-4">
-      <h1 className="text-xl font-semibold text-white">Sales Dashboard</h1>
+      <h1 className="text-xl font-semibold text-[#111827]">Sales Dashboard</h1>
 
       {/* ---------- Statistics ---------- */}
-      <section className="bg-[#161616] border border-[#2a2a2a] rounded-xl">
+      <section className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl">
         <button
           onClick={() => setShowStats((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-white"
+          className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-[#111827]"
         >
           Statistics
           <span className="text-[#6B7280]">{showStats ? '▲' : '▼'}</span>
@@ -97,12 +97,12 @@ export default function SalesDashboard() {
                 key={s.id}
                 onClick={() => setFilter((f) => ({ ...f, status_id: f.status_id === s.id ? undefined : s.id }))}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs transition-colors ${
-                  filter.status_id === s.id ? 'border-white/40' : 'border-[#2a2a2a] hover:border-[#3a3a3a]'
+                  filter.status_id === s.id ? 'border-white/40' : 'border-[#e5e7eb] hover:border-[#d1d5db]'
                 }`}
                 style={{ backgroundColor: `${s.color}12` }}
               >
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-[#cbd5e1]">{s.name}</span>
+                <span className="text-[#374151]">{s.name}</span>
                 <span className="font-bold" style={{ color: s.color }}>{statusCounts[s.id] ?? 0}</span>
               </button>
             ))}
@@ -111,10 +111,10 @@ export default function SalesDashboard() {
       </section>
 
       {/* ---------- Filter ---------- */}
-      <section className="bg-[#161616] border border-[#2a2a2a] rounded-xl">
+      <section className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl">
         <button
           onClick={() => setShowFilter((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-white"
+          className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-[#111827]"
         >
           Filter
           <span className="text-[#6B7280]">{showFilter ? '▲' : '▼'}</span>
@@ -125,19 +125,19 @@ export default function SalesDashboard() {
               <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">From date</label>
               <input type="date" value={filter.from?.slice(0, 10) ?? ''}
                 onChange={(e) => setFilter((f) => ({ ...f, from: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
-                className="w-full mt-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+                className="w-full mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
             </div>
             <div>
               <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">To date</label>
               <input type="date" value={filter.to?.slice(0, 10) ?? ''}
                 onChange={(e) => setFilter((f) => ({ ...f, to: e.target.value ? new Date(e.target.value + 'T23:59:59').toISOString() : undefined }))}
-                className="w-full mt-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+                className="w-full mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
             </div>
             <div>
               <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">Status</label>
               <select value={filter.status_id ?? ''}
                 onChange={(e) => setFilter((f) => ({ ...f, status_id: e.target.value || undefined }))}
-                className="w-full mt-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]">
+                className="w-full mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]">
                 <option value="">All statuses</option>
                 {statuses.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
@@ -146,37 +146,37 @@ export default function SalesDashboard() {
               <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">Project</label>
               <select value={filter.project_id ?? ''}
                 onChange={(e) => setFilter((f) => ({ ...f, project_id: e.target.value || undefined }))}
-                className="w-full mt-1 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]">
+                className="w-full mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]">
                 <option value="">All projects</option>
                 {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
             <div className="col-span-2 md:col-span-4">
-              <button onClick={() => setFilter({})} className="text-xs text-[#5757e6] hover:text-[#7d7dee]">Reset filters</button>
+              <button onClick={() => setFilter({})} className="text-xs text-[#5757e6] hover:text-[#4444cc]">Reset filters</button>
             </div>
           </div>
         )}
       </section>
 
       {/* ---------- Datatable ---------- */}
-      <section className="bg-[#161616] border border-[#2a2a2a] rounded-xl p-5">
+      <section className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2 text-sm text-[#9CA3AF]">
+          <div className="flex items-center gap-2 text-sm text-[#4B5563]">
             Show
             <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}
-              className="bg-[#1c1c22] border border-[#2a2a2a] text-white rounded-lg px-2 py-1 text-sm focus:outline-none">
+              className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] rounded-lg px-2 py-1 text-sm focus:outline-none">
               {[10, 25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
             entries
           </div>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…"
-            className="bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 w-56 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+            className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 w-56 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#2a2a2a] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
+              <tr className="border-b border-[#e5e7eb] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
                 <th className="px-3 py-3">Date</th>
                 <th className="px-3 py-3">Name</th>
                 <th className="px-3 py-3">Phone</th>
@@ -196,10 +196,10 @@ export default function SalesDashboard() {
                 const status = lead.status_id ? statusById[lead.status_id] : undefined
                 const project = lead.project_id ? projectById[lead.project_id] : undefined
                 return (
-                  <tr key={lead.id} className="border-b border-[#2a2a2a] last:border-0 hover:bg-[#1c1c22] transition-colors">
-                    <td className="px-3 py-3 text-[#9CA3AF] text-xs whitespace-nowrap">{fmtDate(lead.created_at)}</td>
+                  <tr key={lead.id} className="border-b border-[#e5e7eb] last:border-0 hover:bg-[#f3f4f6] transition-colors">
+                    <td className="px-3 py-3 text-[#4B5563] text-xs whitespace-nowrap">{fmtDate(lead.created_at)}</td>
                     <td className="px-3 py-3 text-[#5757e6] font-medium">{lead.name}</td>
-                    <td className="px-3 py-3 text-[#9CA3AF] font-mono text-xs">{lead.phone}</td>
+                    <td className="px-3 py-3 text-[#4B5563] font-mono text-xs">{lead.phone}</td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-1.5">
                         {/* Facebook */}
@@ -208,7 +208,7 @@ export default function SalesDashboard() {
                           target="_blank" rel="noopener noreferrer"
                           onClick={() => lead.facebook_url && logContact(lead.id, 'Facebook', CURRENT.name)}
                           title={lead.facebook_url ? 'Open Facebook' : 'No Facebook link'}
-                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${lead.facebook_url ? 'bg-[#1877F2] text-white hover:opacity-80' : 'bg-[#2a2a2a] text-[#4B5563] pointer-events-none'}`}
+                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${lead.facebook_url ? 'bg-[#1877F2] text-white hover:opacity-80' : 'bg-[#e5e7eb] text-[#4B5563] pointer-events-none'}`}
                         >f</a>
                         {/* WhatsApp */}
                         <a href={waLink(lead.phone)} target="_blank" rel="noopener noreferrer"
@@ -232,22 +232,22 @@ export default function SalesDashboard() {
                     </td>
                     <td className="px-3 py-3">
                       {project ? (
-                        <span className="text-xs px-2 py-1 rounded bg-[#5757e6]/15 text-[#7d7dee]">{project.name}</span>
+                        <span className="text-xs px-2 py-1 rounded bg-[#5757e6]/15 text-[#4444cc]">{project.name}</span>
                       ) : <span className="text-[#4B5563] text-xs">—</span>}
                     </td>
                     <td className="px-3 py-3">
                       <select
                         value={lead.status_id ?? ''}
                         onChange={(e) => changeStatus(lead, e.target.value)}
-                        className="bg-[#1c1c22] border border-[#2a2a2a] rounded-lg px-2 py-1 text-xs focus:outline-none"
-                        style={{ color: status?.color ?? '#9CA3AF' }}
+                        className="bg-[#f3f4f6] border border-[#e5e7eb] rounded-lg px-2 py-1 text-xs focus:outline-none"
+                        style={{ color: status?.color ?? '#4B5563' }}
                       >
                         {statuses.map((s) => (
-                          <option key={s.id} value={s.id} style={{ color: '#fff', backgroundColor: '#1c1c22' }}>{s.name}</option>
+                          <option key={s.id} value={s.id} style={{ color: '#fff', backgroundColor: '#f3f4f6' }}>{s.name}</option>
                         ))}
                       </select>
                     </td>
-                    <td className="px-3 py-3 text-xs text-[#9CA3AF]">{lead.expire_note ?? '—'}</td>
+                    <td className="px-3 py-3 text-xs text-[#4B5563]">{lead.expire_note ?? '—'}</td>
                     <td className="px-3 py-3 whitespace-nowrap">
                       <button onClick={() => setWorkFor(lead)}
                         className="text-xs font-medium text-white bg-[#5757e6] hover:bg-[#4444cc] rounded px-2.5 py-1 mr-2">Work</button>
@@ -292,20 +292,20 @@ function ReminderModal({ lead, current, onClose }: { lead: CrmLead; current: { i
   }
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-sm font-semibold text-white mb-1">Schedule reminder</h3>
+      <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold text-[#111827] mb-1">Schedule reminder</h3>
         <p className="text-xs text-[#6B7280] mb-4">Follow-up on {lead.name} · {lead.phone}</p>
         <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">When</label>
         <input type="datetime-local" value={at} onChange={(e) => setAt(e.target.value)}
-          className="w-full mt-1 mb-3 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+          className="w-full mt-1 mb-3 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
         <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">Note</label>
         <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="e.g. Call back about villa pricing"
-          className="w-full mt-1 mb-4 bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+          className="w-full mt-1 mb-4 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
         <div className="flex gap-2">
           <button onClick={save} disabled={saving} className="flex-1 bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white text-sm font-medium rounded-lg py-2">
             {saving ? 'Saving…' : 'Schedule'}
           </button>
-          <button onClick={onClose} className="px-4 text-sm text-[#6B7280] hover:text-white border border-[#2a2a2a] rounded-lg">Cancel</button>
+          <button onClick={onClose} className="px-4 text-sm text-[#6B7280] hover:text-[#111827] border border-[#e5e7eb] rounded-lg">Cancel</button>
         </div>
       </div>
     </div>

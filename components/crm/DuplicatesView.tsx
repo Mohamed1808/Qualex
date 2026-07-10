@@ -18,18 +18,18 @@ export default function DuplicatesView() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-4">
-      <h1 className="text-xl font-semibold text-white">Duplicate Detection</h1>
+      <h1 className="text-xl font-semibold text-[#111827]">Duplicate Detection</h1>
       <p className="text-sm text-[#6B7280]">{clusters.length} phone number(s) appear on more than one lead.</p>
       {clusters.length === 0 ? (
-        <div className="bg-[#161616] border border-[#2a2a2a] rounded-xl py-16 text-center text-[#4B5563] text-sm">No duplicates found.</div>
+        <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl py-16 text-center text-[#4B5563] text-sm">No duplicates found.</div>
       ) : clusters.map(([phone, group]) => (
-        <div key={phone} className="bg-[#161616] border border-[#F59E0B]/30 rounded-xl p-4">
+        <div key={phone} className="bg-[#ffffff] border border-[#F59E0B]/30 rounded-xl p-4">
           <p className="text-xs text-[#F59E0B] font-mono mb-2">{phone} · {group.length} leads</p>
           <div className="space-y-1">
             {group.map((l) => (
-              <div key={l.id} className="flex items-center justify-between text-xs bg-[#1c1c22] rounded-lg px-3 py-2">
-                <span className="text-white">{l.name}</span>
-                <span className="text-[#9CA3AF] capitalize">{l.stage.replace(/_/g, ' ')}</span>
+              <div key={l.id} className="flex items-center justify-between text-xs bg-[#f3f4f6] rounded-lg px-3 py-2">
+                <span className="text-[#111827]">{l.name}</span>
+                <span className="text-[#4B5563] capitalize">{l.stage.replace(/_/g, ' ')}</span>
                 <span className="text-[#6B7280]">{new Date(l.created_at).toLocaleDateString('en-CA')}</span>
               </div>
             ))}

@@ -41,22 +41,22 @@ export default function LeadHistoryDrawer({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex justify-end z-50" onClick={onClose}>
-      <div className="bg-[#161616] border-l border-[#2a2a2a] w-full max-w-md h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-[#ffffff] border-l border-[#e5e7eb] w-full max-w-md h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#2a2a2a] flex items-start justify-between">
+        <div className="px-5 py-4 border-b border-[#e5e7eb] flex items-start justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-white">{lead.name}</h3>
+            <h3 className="text-sm font-semibold text-[#111827]">{lead.name}</h3>
             <p className="text-xs text-[#6B7280] font-mono">{lead.phone}</p>
           </div>
-          <button onClick={onClose} className="text-[#6B7280] hover:text-white">✕</button>
+          <button onClick={onClose} className="text-[#6B7280] hover:text-[#111827]">✕</button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-[#2a2a2a]">
+        <div className="flex border-b border-[#e5e7eb]">
           {(['timeline', 'comments'] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`flex-1 py-2.5 text-xs font-medium capitalize transition-colors border-b-2 -mb-px ${
-                tab === t ? 'text-[#5757e6] border-[#5757e6]' : 'text-[#6B7280] border-transparent hover:text-white'
+                tab === t ? 'text-[#5757e6] border-[#5757e6]' : 'text-[#6B7280] border-transparent hover:text-[#111827]'
               }`}>
               {t === 'timeline' ? 'History' : `Comments (${comments.length})`}
             </button>
@@ -69,13 +69,13 @@ export default function LeadHistoryDrawer({
             history.length === 0 ? (
               <p className="text-xs text-[#4B5563]">No history yet.</p>
             ) : (
-              <ol className="relative border-l border-[#2a2a2a] ml-2">
+              <ol className="relative border-l border-[#e5e7eb] ml-2">
                 {history.map((h) => (
                   <li key={h.id} className="mb-4 ml-4">
-                    <span className="absolute -left-[9px] w-4 h-4 rounded-full bg-[#1c1c22] border border-[#2a2a2a] flex items-center justify-center text-[8px]">
+                    <span className="absolute -left-[9px] w-4 h-4 rounded-full bg-[#f3f4f6] border border-[#e5e7eb] flex items-center justify-center text-[8px]">
                       {TYPE_ICON[h.type]}
                     </span>
-                    <p className="text-xs text-white">{h.detail}</p>
+                    <p className="text-xs text-[#111827]">{h.detail}</p>
                     <p className="text-[10px] text-[#4B5563] mt-0.5">
                       {new Date(h.at).toLocaleString()} · {h.actor_name}
                     </p>
@@ -89,8 +89,8 @@ export default function LeadHistoryDrawer({
             ) : (
               <div className="space-y-3">
                 {comments.map((c) => (
-                  <div key={c.id} className="bg-[#1c1c22] rounded-lg p-3">
-                    <p className="text-xs text-white">{c.body}</p>
+                  <div key={c.id} className="bg-[#f3f4f6] rounded-lg p-3">
+                    <p className="text-xs text-[#111827]">{c.body}</p>
                     <p className="text-[10px] text-[#4B5563] mt-1">{c.author_name} · {new Date(c.created_at).toLocaleString()}</p>
                   </div>
                 ))}
@@ -100,10 +100,10 @@ export default function LeadHistoryDrawer({
         </div>
 
         {/* Add comment */}
-        <div className="p-4 border-t border-[#2a2a2a]">
+        <div className="p-4 border-t border-[#e5e7eb]">
           <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={2}
             placeholder="Add a comment / contact note…"
-            className="w-full bg-[#1c1c22] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+            className="w-full bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
           <button onClick={submit} disabled={saving || !body.trim()}
             className="mt-2 w-full bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white text-sm font-medium rounded-lg py-2">
             {saving ? 'Saving…' : 'Add comment'}

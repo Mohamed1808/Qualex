@@ -33,20 +33,20 @@ export default function LeadWorkDrawer({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex justify-end z-50" onClick={onClose}>
-      <div className="bg-[#161616] border-l border-[#2a2a2a] w-full max-w-lg h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-[#ffffff] border-l border-[#e5e7eb] w-full max-w-lg h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#2a2a2a] flex items-start justify-between">
+        <div className="px-5 py-4 border-b border-[#e5e7eb] flex items-start justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-white">{lead.name}</h3>
+            <h3 className="text-sm font-semibold text-[#111827]">{lead.name}</h3>
             <p className="text-xs text-[#6B7280] font-mono">{lead.phone}</p>
-            <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-[#5757e6]/15 text-[#7d7dee] capitalize">
+            <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-[#5757e6]/15 text-[#4444cc] capitalize">
               {lead.stage.replace(/_/g, ' ')}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
             <a href={`tel:${lead.phone}`} className="w-7 h-7 rounded-full bg-[#5757e6] text-white flex items-center justify-center text-xs">☎</a>
             <a href={`https://wa.me/${lead.phone.replace(/\D/g, '').replace(/^0/, '20')}`} target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-full bg-[#25D366] text-white flex items-center justify-center text-xs">✆</a>
-            <button onClick={onClose} className="text-[#6B7280] hover:text-white ml-1">✕</button>
+            <button onClick={onClose} className="text-[#6B7280] hover:text-[#111827] ml-1">✕</button>
           </div>
         </div>
 
@@ -79,7 +79,7 @@ export default function LeadWorkDrawer({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h4 className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wide mb-2">{title}</h4>
+      <h4 className="text-xs font-semibold text-[#4B5563] uppercase tracking-wide mb-2">{title}</h4>
       {children}
     </div>
   )
@@ -115,16 +115,16 @@ function CallAttemptsPanel({ lead, stage, attempts, currentUser, onLogged }: {
     <Section title={`Call Attempts (${attempts.length}${streak > 0 ? ` · ${streak}/3 no-answer` : ''})`}>
       <div className="space-y-2">
         {ordered.map((a) => (
-          <div key={a.id} className="bg-[#1c1c22] rounded-lg p-2.5 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-[#2a2a2a] text-white text-[10px] flex items-center justify-center">{a.attempt_number}</span>
+          <div key={a.id} className="bg-[#f3f4f6] rounded-lg p-2.5 flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-[#e5e7eb] text-[#111827] text-[10px] flex items-center justify-center">{a.attempt_number}</span>
             <span className="text-xs px-2 py-0.5 rounded" style={{ color: OUTCOME_COLOR[a.outcome], backgroundColor: `${OUTCOME_COLOR[a.outcome]}15` }}>{a.outcome.replace('_', ' ')}</span>
-            {a.notes && <span className="text-xs text-[#9CA3AF] truncate">{a.notes}</span>}
+            {a.notes && <span className="text-xs text-[#4B5563] truncate">{a.notes}</span>}
           </div>
         ))}
         {locked ? (
           <p className="text-xs text-[#F26161] bg-[#F26161]/10 rounded-lg px-3 py-2">Unreachable — 3 consecutive no-answers.</p>
         ) : open ? (
-          <div className="bg-[#1c1c22] rounded-lg p-3 space-y-2">
+          <div className="bg-[#f3f4f6] rounded-lg p-3 space-y-2">
             <select value={outcome} onChange={(e) => setOutcome(e.target.value as typeof outcome)} className={inp}>
               <option value="answered">Answered</option>
               <option value="no_answer">No Answer</option>
@@ -228,7 +228,7 @@ function DispositionPanel({ lead, stage, currentUser, onDone }: { lead: CrmLead;
       <div className="flex flex-wrap gap-2">
         {(['unqualified', 'no_answer', 'retired', 'terminated'] as Disposition[]).map((d) => (
           <button key={d} disabled={busy} onClick={() => dispose(d)}
-            className="text-xs px-3 py-1.5 rounded-lg border border-[#2a2a2a] text-[#9CA3AF] hover:text-white hover:border-[#3a3a3a] capitalize disabled:opacity-50">
+            className="text-xs px-3 py-1.5 rounded-lg border border-[#e5e7eb] text-[#4B5563] hover:text-[#111827] hover:border-[#d1d5db] capitalize disabled:opacity-50">
             {d.replace('_', ' ')}
           </button>
         ))}
@@ -255,4 +255,4 @@ function ReminderPanel({ lead, currentUser }: { lead: CrmLead; currentUser: { id
   )
 }
 
-const inp = 'w-full bg-[#0f0f0f] border border-[#2a2a2a] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]'
+const inp = 'w-full bg-[#f7f8fa] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]'
