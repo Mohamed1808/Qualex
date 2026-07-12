@@ -61,7 +61,14 @@ export interface UserHistoryEntry {
   action: string
 }
 
-export type LeadChannel = 'whatsapp' | 'meta' | 'website' | 'app' | 'call_center'
+export type LeadChannel =
+  | 'call_center'
+  | 'facebook'
+  | 'instagram'
+  | 'website'
+  | 'app'
+  | 'whatsapp'
+  | 'walkin'
 
 export interface LeadComment {
   id: string
@@ -100,7 +107,8 @@ export type LeadStage =
 
 export type Disposition = 'qualified' | 'unqualified' | 'no_answer' | 'terminated' | 'retired'
 export type FinancingProgram = 'new_car' | 'used_car' | 'collateral'
-export type CarSource = 'dealer' | 'individual_c2c' | 'undecided'
+export type CarSource = 'dealer' | 'individual' | 'distributor' | 'undecided'
+export type ExpectedProgram = 'D2' | 'D3' | 'U2' | 'U4' | 'LC1' | 'LC5'
 
 export interface CrmLead {
   id: string
@@ -108,6 +116,7 @@ export interface CrmLead {
   phone: string
   facebook_url: string | null
   channel: LeadChannel
+  campaign: string | null
   project_id: string | null
   status_id: string | null // dynamic sub-status / disposition chip
   // active owner in the CURRENT stage (TS agent, then DS agent)
@@ -140,9 +149,15 @@ export interface CrmLead {
   occupation: string | null
   customer_national_id: string | null
   requested_car_brand: string | null
+  requested_car_model: string | null
   requested_car_year: number | null
+  expected_program: ExpectedProgram | null
   id_document_url: string | null
   unqualification_reason: string | null
+
+  // auto-callback scheduling (system-driven after no-answers)
+  next_callback_at: string | null
+  callback_locked: boolean
 
   // duplicate detection
   is_duplicate: boolean
@@ -151,6 +166,12 @@ export interface CrmLead {
 
 export type CallStage = 'telesales' | 'direct_sales'
 export type CallOutcome = 'answered' | 'no_answer' | 'callback_scheduled'
+export type AnsweredCategory =
+  | 'pending_id'
+  | 'inquiry_only'
+  | 'high_interest'
+  | 'follow_up_needed'
+  | 'specific_call_back_time'
 
 export interface CallAttempt {
   id: string
@@ -160,6 +181,7 @@ export interface CallAttempt {
   stage: CallStage
   attempt_number: number
   outcome: CallOutcome
+  answered_category: AnsweredCategory | null
   callback_at: string | null
   notes: string | null
   called_at: string
@@ -220,5 +242,7 @@ export interface LeadFilter {
   status_id?: string
   project_id?: string
   assigned_user_id?: string
+  channel?: LeadChannel
+  campaign?: string
   search?: string
 }

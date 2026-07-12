@@ -23,8 +23,8 @@ import type {
   Attendance, CallAttempt, CallStage, CallOutcome, Disposition, LeadStage,
 } from './types'
 
-// v3: added pipeline fields — bump the key so old localStorage reseeds cleanly.
-const KEY = 'qualex-crm-v3'
+// v4: added channels/campaign/KYC/vehicle/auto-callback fields — bump to reseed.
+const KEY = 'qualex-crm-v4'
 
 interface Store {
   statuses: LeadStatus[]
@@ -179,6 +179,8 @@ export async function listLeads(filter: LeadFilter = {}): Promise<CrmLead[]> {
   if (filter.status_id) leads = leads.filter((l) => l.status_id === filter.status_id)
   if (filter.project_id) leads = leads.filter((l) => l.project_id === filter.project_id)
   if (filter.assigned_user_id) leads = leads.filter((l) => l.assigned_user_id === filter.assigned_user_id)
+  if (filter.channel) leads = leads.filter((l) => l.channel === filter.channel)
+  if (filter.campaign) leads = leads.filter((l) => l.campaign === filter.campaign)
   if (filter.from) leads = leads.filter((l) => l.created_at >= filter.from!)
   if (filter.to) leads = leads.filter((l) => l.created_at <= filter.to!)
   if (filter.search) {
@@ -359,10 +361,12 @@ export async function assignDirectSales(leadId: string, agentId: string, actor: 
 }
 
 export interface QualificationInput {
+  name?: string; phone?: string
   salary_bracket?: string; down_payment_bracket?: string
   financing_program?: CrmLead['financing_program']; car_source?: CrmLead['car_source']
   knows_specific_car?: boolean; occupation?: string; customer_national_id?: string
-  requested_car_brand?: string; requested_car_year?: number
+  requested_car_brand?: string; requested_car_model?: string; requested_car_year?: number
+  expected_program?: CrmLead['expected_program']
 }
 
 /** Telesales qualifies a lead → moves to DS supervisor's unassigned queue. */
@@ -402,30 +406,154 @@ export async function listCallAttempts(leadId: string, stage: CallStage): Promis
   return delay(read().callAttempts.filter((c) => c.lead_id === leadId && c.stage === stage).sort((a, b) => a.attempt_number - b.attempt_number))
 }
 
+// Auto-callback intervals after consecutive no-answers: 30m, 1h, 24h.
+const CALLBACK_MINUTES = [30, 60, 24 * 60]
+
 export async function logCallAttempt(
   leadId: string, stage: CallStage, outcome: CallOutcome,
   callbackAt: string | null, notes: string | null, agentId: string, agentName: string,
-): Promise<{ ok: boolean; unreachable?: boolean; error?: string }> {
+  answeredCategory: import('./types').AnsweredCategory | null = null,
+): Promise<{ ok: boolean; unreachable?: boolean; terminated?: boolean; autoCallbackAt?: string; error?: string }> {
   const s = read()
   const list = s.callAttempts.filter((c) => c.lead_id === leadId && c.stage === stage).sort((a, b) => a.attempt_number - b.attempt_number)
   let streak = 0
   for (let i = list.length - 1; i >= 0; i--) { if (list[i].outcome === 'no_answer') streak++; else break }
-  if (streak >= 3) return delay({ ok: false, error: 'Customer unreachable after 3 consecutive no-answers.' })
+  // After 3 no-answers (each with its scheduled callback), a further no-answer terminates.
+  if (streak >= 3) {
+    patchLead(s, leadId, { stage: 'terminated', callback_locked: true, next_callback_at: null })
+    logHistory(s, leadId, agentName, 'status_change', 'Auto-terminated after 3 no-answers and callbacks elapsed')
+    write(s)
+    return delay({ ok: false, terminated: true, error: 'Lead auto-terminated after 3 no-answers.' })
+  }
 
   const nextNo = (list[list.length - 1]?.attempt_number ?? 0) + 1
-  s.callAttempts.push({ id: uid(), lead_id: leadId, agent_id: agentId, agent_name: agentName, stage, attempt_number: nextNo, outcome, callback_at: callbackAt, notes, called_at: now() })
+  s.callAttempts.push({
+    id: uid(), lead_id: leadId, agent_id: agentId, agent_name: agentName, stage,
+    attempt_number: nextNo, outcome, answered_category: answeredCategory,
+    callback_at: callbackAt, notes, called_at: now(),
+  })
 
-  const newStreak = outcome === 'no_answer' ? streak + 1 : 0
   let unreachable = false
-  if (outcome === 'no_answer' && newStreak >= 3) {
-    patchLead(s, leadId, { stage: 'unreachable' })
-    logHistory(s, leadId, agentName, 'status_change', 'Closed as unreachable after 3 consecutive no-answers')
-    unreachable = true
-  } else {
-    patchLead(s, leadId, { stage: stage === 'telesales' ? 'telesales_in_progress' : 'ds_in_progress' })
+  let autoCallbackAt: string | undefined
+  const patch: Partial<CrmLead> = { stage: stage === 'telesales' ? 'telesales_in_progress' : 'ds_in_progress' }
+
+  if (outcome === 'no_answer') {
+    const newStreak = streak + 1
+    // system-driven callback, non-editable by the agent
+    const mins = CALLBACK_MINUTES[Math.min(newStreak - 1, CALLBACK_MINUTES.length - 1)]
+    autoCallbackAt = new Date(Date.now() + mins * 60_000).toISOString()
+    patch.next_callback_at = autoCallbackAt
+    patch.callback_locked = true
+  } else if (outcome === 'answered') {
+    // engaged again — clear the auto-callback lock
+    patch.next_callback_at = answeredCategory === 'specific_call_back_time' ? callbackAt : null
+    patch.callback_locked = false
+  } else if (outcome === 'callback_scheduled') {
+    patch.next_callback_at = callbackAt
   }
-  logHistory(s, leadId, agentName, 'contact', `Call attempt ${nextNo}: ${outcome}${notes ? ` — ${notes}` : ''}`)
-  write(s); return delay({ ok: true, unreachable })
+
+  patchLead(s, leadId, patch)
+  const detail = outcome === 'answered' && answeredCategory
+    ? `Call attempt ${nextNo}: answered — ${answeredCategory.replace(/_/g, ' ')}${notes ? ` (${notes})` : ''}`
+    : `Call attempt ${nextNo}: ${outcome}${notes ? ` — ${notes}` : ''}`
+  logHistory(s, leadId, agentName, 'contact', detail)
+  write(s); return delay({ ok: true, unreachable, autoCallbackAt })
+}
+
+/**
+ * Reassign a lead to another agent at ANY stage, recording a supervisor comment
+ * explaining why (e.g. an unqualified lead that needs re-tackling). Sets the
+ * lead back to the appropriate assigned stage for the target agent's team.
+ */
+export async function reassignWithComment(
+  leadId: string, toUserId: string, comment: string, actor: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const s = read()
+  const lead = s.leads.find((l) => l.id === leadId)
+  const target = s.users.find((u) => u.id === toUserId)
+  if (!lead || !target) return delay({ ok: false, error: 'Lead or user not found' })
+
+  const isDS = target.role.startsWith('direct_sales')
+  const patch: Partial<CrmLead> = { assigned_user_id: toUserId }
+  if (isDS) {
+    patch.assigned_direct_sales_agent = toUserId
+    patch.stage = 'ds_assigned'
+    patch.ds_sla_due_at = slaDue(SLA_DS_HOURS)
+    patch.ds_sla_breached = false
+    patch.direct_sales_assigned_at = now()
+  } else {
+    patch.assigned_telesales_agent = toUserId
+    patch.stage = 'telesales_assigned'
+    patch.tele_sla_due_at = slaDue(SLA_TELE_HOURS)
+    patch.tele_sla_breached = false
+  }
+  // reopening a lead clears the auto-callback lock so the agent can work it
+  patch.callback_locked = false
+  patch.next_callback_at = null
+
+  patchLead(s, leadId, patch)
+  if (comment.trim()) {
+    s.comments.push({ id: uid(), lead_id: leadId, author_id: 'supervisor', author_name: actor, body: comment.trim(), created_at: now() })
+  }
+  logHistory(s, leadId, actor, 'assignment', `Reassigned to ${target.full_name}${comment.trim() ? ` — ${comment.trim()}` : ''}`)
+  write(s); return delay({ ok: true })
+}
+
+/**
+ * Auto-assign all unassigned "new" telesales leads across active telesales
+ * agents, balancing by current open-lead count (least-loaded first), with a
+ * shuffle so ties are distributed randomly.
+ */
+export async function autoAssignBalanced(actor: string, leadIds?: string[]): Promise<number> {
+  const s = read()
+  const agents = s.users.filter((u) => u.role === 'telesales_agent' && u.is_active)
+  if (agents.length === 0) return delay(0)
+
+  // current open (telesales-stage) load per agent
+  const TELE_STAGES = ['telesales_assigned', 'telesales_in_progress']
+  const load: Record<string, number> = {}
+  for (const a of agents) load[a.id] = s.leads.filter((l) => l.assigned_telesales_agent === a.id && TELE_STAGES.includes(l.stage)).length
+
+  let pool = s.leads.filter((l) => l.stage === 'new' && !l.assigned_user_id)
+  if (leadIds) pool = pool.filter((l) => leadIds.includes(l.id))
+  // shuffle the pool for randomness
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[pool[i], pool[j]] = [pool[j], pool[i]] }
+
+  let assigned = 0
+  for (const lead of pool) {
+    // pick least-loaded agent (ties broken randomly by prior shuffle of agents)
+    const shuffled = [...agents].sort(() => Math.random() - 0.5)
+    const best = shuffled.reduce((b, a) => (load[a.id] < load[b.id] ? a : b))
+    lead.assigned_user_id = best.id
+    lead.assigned_telesales_agent = best.id
+    lead.stage = 'telesales_assigned'
+    lead.tele_sla_due_at = slaDue(SLA_TELE_HOURS)
+    lead.updated_at = now()
+    load[best.id]++
+    s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: actor, type: 'assignment', detail: `Auto-assigned (balanced) to ${best.full_name}` })
+    assigned++
+  }
+  write(s); return delay(assigned)
+}
+
+/** Assign a specific set of leads to one agent (bulk assign from a filter). */
+export async function bulkAssign(leadIds: string[], toUserId: string, actor: string): Promise<number> {
+  const s = read()
+  const target = s.users.find((u) => u.id === toUserId)
+  if (!target) return delay(0)
+  const isDS = target.role.startsWith('direct_sales')
+  let count = 0
+  for (const id of leadIds) {
+    const lead = s.leads.find((l) => l.id === id)
+    if (!lead) continue
+    lead.assigned_user_id = toUserId
+    if (isDS) { lead.assigned_direct_sales_agent = toUserId; if (['qualified'].includes(lead.stage)) lead.stage = 'ds_assigned'; lead.direct_sales_assigned_at = now(); lead.ds_sla_due_at = slaDue(SLA_DS_HOURS) }
+    else { lead.assigned_telesales_agent = toUserId; if (lead.stage === 'new') lead.stage = 'telesales_assigned'; lead.tele_sla_due_at = slaDue(SLA_TELE_HOURS) }
+    lead.updated_at = now()
+    s.history.push({ id: uid(), lead_id: id, at: now(), actor_name: actor, type: 'assignment', detail: `Bulk-assigned to ${target.full_name}` })
+    count++
+  }
+  write(s); return delay(count)
 }
 
 // ---- attendance ----

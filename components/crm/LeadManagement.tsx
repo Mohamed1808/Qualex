@@ -11,9 +11,11 @@ import {
 import LeadHistoryDrawer from './LeadHistoryDrawer'
 import PageHeader from './ui/PageHeader'
 import SlideOver from './ui/SlideOver'
+import { Pill } from './ui/Pill'
 import { TableSkeleton } from './ui/Skeleton'
 import EmptyState from './ui/EmptyState'
 import { DensityToggle, useDensity } from './ui/useDensity'
+import { CHANNELS, CHANNEL_LABELS, CHANNEL_COLORS } from '@/lib/crm/constants'
 
 const ACTOR = { id: 'u-admin', name: 'Mohamed Moheb' }
 
@@ -41,16 +43,19 @@ export default function LeadManagement() {
   const statusById = useMemo(() => Object.fromEntries(statuses.map((s) => [s.id, s])), [statuses])
   const projectById = useMemo(() => Object.fromEntries(projects.map((p) => [p.id, p])), [projects])
   const agents = users.filter((u) => u.role.includes('agent'))
-  const hasFilters = Boolean(filter.status_id || filter.project_id || filter.assigned_user_id || filter.from || filter.to || search)
+  const campaigns = useMemo(() => Array.from(new Set(leads.map((l) => l.campaign).filter(Boolean))) as string[], [leads])
+  const hasFilters = Boolean(filter.status_id || filter.project_id || filter.assigned_user_id || filter.channel || filter.campaign || filter.from || filter.to || search)
 
   function exportCsv() {
     const rows = leads.map((l) => ({
       Date: new Date(l.created_at).toLocaleDateString('en-CA'),
       Name: l.name, Phone: l.phone,
+      Source: CHANNEL_LABELS[l.channel],
+      Campaign: l.campaign ?? '',
       Project: projectById[l.project_id ?? '']?.name ?? '',
       Status: statusById[l.status_id ?? '']?.name ?? '',
       Assigned: users.find((u) => u.id === l.assigned_user_id)?.full_name ?? '',
-      Facebook: l.facebook_url ?? '',
+      NationalID: l.customer_national_id ?? '',
     }))
     const csv = Papa.unparse(rows)
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
@@ -86,7 +91,13 @@ export default function LeadManagement() {
         <select value={filter.assigned_user_id ?? ''} onChange={(e) => setFilter((f) => ({ ...f, assigned_user_id: e.target.value || undefined }))} className={sel}>
           <option value="">All agents</option>{agents.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
         </select>
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or phone…" className={`${sel} sm:col-span-2 md:col-span-4`} />
+        <select value={filter.channel ?? ''} onChange={(e) => setFilter((f) => ({ ...f, channel: (e.target.value || undefined) as typeof f.channel }))} className={sel}>
+          <option value="">All sources</option>{CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_LABELS[c]}</option>)}
+        </select>
+        <select value={filter.campaign ?? ''} onChange={(e) => setFilter((f) => ({ ...f, campaign: e.target.value || undefined }))} className={sel}>
+          <option value="">All campaigns</option>{campaigns.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or phone…" className={`${sel} sm:col-span-2 md:col-span-3`} />
         {hasFilters && (
           <button onClick={() => { setFilter({}); setSearch('') }} className="text-xs text-[#5757e6] hover:text-[#4444cc] self-center">Reset</button>
         )}
@@ -101,15 +112,15 @@ export default function LeadManagement() {
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-white z-[1]">
               <tr className="border-b border-[#e5e7eb] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
-                <th className="px-4 py-3">Date</th><th className="px-4 py-3">Name</th><th className="px-4 py-3">Phone</th>
-                <th className="px-4 py-3">Project</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Assigned</th><th className="px-4 py-3">History</th>
+                <th className="px-4 py-3">Date</th><th className="px-4 py-3">Name</th><th className="px-4 py-3">Phone</th><th className="px-4 py-3">Source</th>
+                <th className="px-4 py-3">Project</th><th className="px-4 py-3">Campaign</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Assigned</th><th className="px-4 py-3">History</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <TableSkeleton rows={6} cols={7} />
               ) : leads.length === 0 ? (
-                <tr><td colSpan={7}>
+                <tr><td colSpan={9}>
                   <EmptyState icon="❄️" title="No leads found"
                     hint={hasFilters ? 'Try adjusting or resetting your filters.' : 'Add leads manually or import a CSV to get started.'}
                     action={hasFilters ? { label: 'Reset filters', onClick: () => { setFilter({}); setSearch('') } } : { label: '+ Add Leads', onClick: () => setAdding(true) }} />
@@ -121,7 +132,9 @@ export default function LeadManagement() {
                     <td className={`px-4 ${rowPad} text-[#4B5563] text-xs whitespace-nowrap`}>{new Date(l.created_at).toLocaleDateString('en-CA')}</td>
                     <td className={`px-4 ${rowPad} text-[#111827]`}>{l.name}</td>
                     <td className={`px-4 ${rowPad} text-[#4B5563] font-mono text-xs`}>{l.phone}</td>
+                    <td className={`px-4 ${rowPad}`}><Pill label={CHANNEL_LABELS[l.channel]} color={CHANNEL_COLORS[l.channel]} /></td>
                     <td className={`px-4 ${rowPad} text-xs text-[#4B5563]`}>{projectById[l.project_id ?? '']?.name ?? '—'}</td>
+                    <td className={`px-4 ${rowPad} text-xs text-[#4B5563]`}>{l.campaign ?? '—'}</td>
                     <td className={`px-4 ${rowPad}`}>
                       <select value={l.status_id ?? ''} onChange={async (e) => { await updateLeadStatus(l.id, e.target.value, ACTOR.name); reload() }}
                         className="bg-[#f3f4f6] border border-[#e5e7eb] rounded-lg px-2 py-1 text-xs focus:outline-none" style={{ color: status?.color ?? '#4B5563' }}>
@@ -154,7 +167,8 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
   const [mode, setMode] = useState<'manual' | 'import'>('manual')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
-  const [facebook, setFacebook] = useState('')
+  const [channel, setChannel] = useState<LeadChannel>('call_center')
+  const [campaign, setCampaign] = useState('')
   const [projectId, setProjectId] = useState(projects[0]?.id ?? '')
   const [saving, setSaving] = useState(false)
   const [touched, setTouched] = useState(false)
@@ -169,7 +183,7 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
     setTouched(true)
     if (!name.trim() || !phone.trim() || phoneError) { toast.error('Fix the highlighted fields'); return }
     setSaving(true)
-    await createLead({ name: name.trim(), phone: phone.trim(), facebook_url: facebook.trim() || null, channel: 'call_center', project_id: projectId || null, status_id: defaultStatus, assigned_user_id: null, expire_note: null })
+    await createLead({ name: name.trim(), phone: phone.trim(), channel, campaign: campaign.trim() || null, project_id: projectId || null, status_id: defaultStatus, assigned_user_id: null, expire_note: null })
     setSaving(false)
     toast.success('Lead added')
     onDone()
@@ -182,12 +196,17 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
       header: true, skipEmptyLines: true,
       complete: async (res) => {
         const rows = (res.data as Record<string, string>[])
-          .map((r) => ({
-            name: r.name || r.Name || '', phone: r.phone || r.Phone || r.mobile || '',
-            facebook_url: r.facebook || r.Facebook || null,
-            channel: 'call_center' as LeadChannel, project_id: projectId || null,
-            status_id: defaultStatus, assigned_user_id: null, expire_note: null,
-          }))
+          .map((r) => {
+            const rawCh = (r.source || r.Source || r.channel || r.Channel || '').toLowerCase().replace(/[\s-]/g, '_')
+            const ch = (CHANNELS as string[]).includes(rawCh) ? (rawCh as LeadChannel) : channel
+            return {
+              name: r.name || r.Name || '', phone: r.phone || r.Phone || r.mobile || '',
+              channel: ch, campaign: r.campaign || r.Campaign || null,
+              customer_national_id: r.national_id || r.nationalId || r.NationalID || null,
+              project_id: projectId || null,
+              status_id: defaultStatus, assigned_user_id: null, expire_note: null,
+            }
+          })
           .filter((r) => r.name && r.phone)
         if (rows.length === 0) { toast.error('No valid rows (need name + phone columns)'); return }
         const n = await importLeads(rows)
@@ -207,11 +226,19 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
         ))}
       </div>
 
-      <div className="mb-3">
-        <label className={lbl}>Project</label>
-        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={sel}>
-          <option value="">No project</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label className={lbl}>Project</label>
+          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={sel}>
+            <option value="">No project</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className={lbl}>Source</label>
+          <select value={channel} onChange={(e) => setChannel(e.target.value as LeadChannel)} className={sel}>
+            {CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_LABELS[c]}</option>)}
+          </select>
+        </div>
       </div>
 
       {mode === 'manual' ? (
@@ -226,12 +253,12 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
             <input value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setTouched(true)} className={errCls(sel, !!phoneError)} placeholder="01xxxxxxxxx" />
             {phoneError && <p className={errText}>{phoneError}</p>}
           </div>
-          <div><label className={lbl}>Facebook URL (optional)</label><input value={facebook} onChange={(e) => setFacebook(e.target.value)} className={sel} /></div>
+          <div><label className={lbl}>Campaign (optional)</label><input value={campaign} onChange={(e) => setCampaign(e.target.value)} className={sel} placeholder="e.g. Summer 2025" /></div>
           <button onClick={saveManual} disabled={saving} className="bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white text-sm font-medium rounded-lg px-5 py-2 transition-colors">{saving ? 'Saving…' : 'Add Lead'}</button>
         </div>
       ) : (
         <div>
-          <p className="text-xs text-[#4B5563] mb-3">Upload a CSV with <span className="text-[#111827] font-mono">name, phone</span> columns (optional <span className="font-mono">facebook</span>). Leads go into the selected project.</p>
+          <p className="text-xs text-[#4B5563] mb-3">Upload a CSV with <span className="text-[#111827] font-mono">name, phone</span> columns (optional <span className="font-mono">source, campaign, national_id</span>). Rows use the source above unless a <span className="font-mono">source</span> column is present.</p>
           <input ref={fileRef} type="file" accept=".csv" onChange={onFile}
             className="block w-full text-xs text-[#4B5563] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#5757e6] file:text-white file:text-sm file:cursor-pointer" />
           {importCount !== null && <p className="text-xs text-[#22C55E] mt-3">✓ Imported {importCount} leads</p>}

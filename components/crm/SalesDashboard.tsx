@@ -2,25 +2,22 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import type { CrmLead, LeadStatus, Project, LeadFilter } from '@/lib/crm/types'
+import type { CrmLead, LeadStatus, Project, LeadFilter, LeadChannel } from '@/lib/crm/types'
 import {
-  listLeads, listStatuses, listProjects, updateLeadStatus, scheduleReminder, logContact,
+  listLeads, listStatuses, listProjects, updateLeadStatus, scheduleReminder,
 } from '@/lib/crm/service'
 import LeadHistoryDrawer from './LeadHistoryDrawer'
 import LeadWorkDrawer from './LeadWorkDrawer'
 import { useSession } from '@/lib/crm/session'
 import PageHeader from './ui/PageHeader'
-import IconAction from './ui/IconAction'
+import { Pill } from './ui/Pill'
 import { TableSkeleton } from './ui/Skeleton'
 import EmptyState from './ui/EmptyState'
 import { DensityToggle, useDensity } from './ui/useDensity'
+import { CHANNELS, CHANNEL_LABELS, CHANNEL_COLORS } from '@/lib/crm/constants'
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-CA') // YYYY-MM-DD
-}
-function waLink(phone: string) {
-  const digits = phone.replace(/\D/g, '').replace(/^0/, '20')
-  return `https://wa.me/${digits}`
 }
 
 export default function SalesDashboard() {
@@ -75,7 +72,7 @@ export default function SalesDashboard() {
   }, [allLeads])
 
   const visible = leads.slice(0, pageSize)
-  const hasFilters = Boolean(filter.status_id || filter.project_id || filter.from || filter.to || search)
+  const hasFilters = Boolean(filter.status_id || filter.project_id || filter.channel || filter.from || filter.to || search)
 
   async function changeStatus(lead: CrmLead, statusId: string) {
     await updateLeadStatus(lead.id, statusId, CURRENT.name)
@@ -161,6 +158,15 @@ export default function SalesDashboard() {
                 {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
+            <div>
+              <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">Source</label>
+              <select value={filter.channel ?? ''}
+                onChange={(e) => setFilter((f) => ({ ...f, channel: (e.target.value || undefined) as LeadChannel | undefined }))}
+                className="w-full mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]">
+                <option value="">All sources</option>
+                {CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_LABELS[c]}</option>)}
+              </select>
+            </div>
             {hasFilters && (
               <div className="col-span-1 sm:col-span-2 md:col-span-4">
                 <button onClick={() => setFilter({})} className="text-xs text-[#5757e6] hover:text-[#4444cc]">Reset filters</button>
@@ -195,11 +201,11 @@ export default function SalesDashboard() {
                 <th className="px-3 py-3">Date</th>
                 <th className="px-3 py-3">Name</th>
                 <th className="px-3 py-3">Phone</th>
-                <th className="px-3 py-3">Quick Actions</th>
+                <th className="px-3 py-3">Source</th>
                 <th className="px-3 py-3">Project</th>
                 <th className="px-3 py-3">Status</th>
                 <th className="px-3 py-3">Note</th>
-                <th className="px-3 py-3">History</th>
+                <th className="px-3 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -219,27 +225,7 @@ export default function SalesDashboard() {
                     <td className={`px-3 ${rowPad} text-[#5757e6] font-medium`}>{lead.name}</td>
                     <td className={`px-3 ${rowPad} text-[#4B5563] font-mono text-xs`}>{lead.phone}</td>
                     <td className={`px-3 ${rowPad}`}>
-                      <div className="flex items-center gap-1.5">
-                        <IconAction label={lead.facebook_url ? 'Open Facebook' : 'No Facebook link'} href={lead.facebook_url ?? undefined}
-                          target="_blank" rel="noopener noreferrer" bg={lead.facebook_url ? '#1877F2' : '#e5e7eb'} color={lead.facebook_url ? '#fff' : '#9CA3AF'}
-                          disabled={!lead.facebook_url}>
-                          f
-                        </IconAction>
-                        <IconAction label="Contact on WhatsApp" href={waLink(lead.phone)} target="_blank" rel="noopener noreferrer"
-                          onClick={() => logContact(lead.id, 'WhatsApp', CURRENT.name)} bg="#25D366">
-                          ✆
-                        </IconAction>
-                        <IconAction label="Call" href={`tel:${lead.phone}`} onClick={() => logContact(lead.id, 'Call', CURRENT.name)} bg="#5757e6">
-                          ☎
-                        </IconAction>
-                        <IconAction label="Schedule a reminder" onClick={() => setReminderFor(lead)} bg="#F59E0B33" color="#B45309">
-                          🔔
-                        </IconAction>
-                        <a href={`/crm/whatsapp?lead=${lead.id}`} title="Company WhatsApp chat"
-                          className="ml-1 flex items-center gap-1 px-2.5 h-9 rounded-lg bg-[#7C3AED] text-white text-xs font-medium hover:bg-[#6D28D9] transition-colors">
-                          💬 Chat
-                        </a>
-                      </div>
+                      <Pill label={CHANNEL_LABELS[lead.channel]} color={CHANNEL_COLORS[lead.channel]} />
                     </td>
                     <td className={`px-3 ${rowPad}`}>
                       {project ? (
