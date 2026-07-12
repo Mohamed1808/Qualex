@@ -9,12 +9,13 @@ import { Skeleton } from './ui/Skeleton'
 import EmptyState from './ui/EmptyState'
 
 export default function AgentLeadsDrawer({
-  agent, team, users, actorName, onClose, onChanged,
+  agent, team, users, actorName, actorId, onClose, onChanged,
 }: {
   agent: CrmUser
   team: 'telesales' | 'direct_sales'
   users: CrmUser[]
   actorName: string
+  actorId: string
   onClose: () => void
   onChanged: () => void
 }) {
@@ -42,7 +43,7 @@ export default function AgentLeadsDrawer({
     if (!reassignFor || !toUser) { toast.error('Pick an agent'); return }
     if (!comment.trim()) { toast.error('Add a comment explaining the reassignment'); return }
     setSaving(true)
-    const res = await reassignWithComment(reassignFor.id, toUser, comment.trim(), actorName)
+    const res = await reassignWithComment(reassignFor.id, toUser, comment.trim(), actorName, actorId)
     setSaving(false)
     if (!res.ok) { toast.error(res.error ?? 'Failed'); return }
     toast.success('Lead reassigned')

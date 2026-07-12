@@ -31,6 +31,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: '/crm/credit', label: 'Credit Decisions', icon: '🏦', audiences: ['ds_sup', 'admin'] },
       { href: '/crm/attendance', label: 'Attendance', icon: '✅', audiences: ['ts_sup', 'ds_sup', 'admin'] },
       { href: '/crm/duplicates', label: 'Duplicates', icon: '🔁', audiences: ['ts_sup', 'ds_sup', 'admin'] },
+      { href: '/crm/activity', label: 'Activity Log', icon: '🕒', audiences: ['ts_sup', 'ds_sup', 'admin'] },
     ],
   },
   {

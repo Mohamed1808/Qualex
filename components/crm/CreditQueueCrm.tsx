@@ -35,7 +35,7 @@ export default function CreditQueueCrm() {
   async function decide(lead: CrmLead, decision: 'approved' | 'rejected') {
     setTouched(true)
     if (decision === 'rejected' && !note.trim()) { toast.error('Add a rejection reason'); return }
-    await recordCreditDecision(lead.id, decision, note.trim(), user.full_name)
+    await recordCreditDecision(lead.id, decision, note.trim(), user.full_name, user.id)
     toast.success(`Lead ${decision}`)
     setActing(null); setNote(''); setTouched(false)
     reload()

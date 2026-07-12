@@ -166,7 +166,7 @@ export default function CrmAnalytics({ team }: { team: 'telesales' | 'direct_sal
       )}
 
       {openAgent && (
-        <AgentLeadsDrawer agent={openAgent} team={team} users={users} actorName={user.full_name}
+        <AgentLeadsDrawer agent={openAgent} team={team} users={users} actorName={user.full_name} actorId={user.id}
           onClose={() => setOpenAgent(null)} onChanged={loadAll} />
       )}
     </div>

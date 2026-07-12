@@ -125,7 +125,7 @@ function ReadonlyField({ label, value }: { label: string; value: string }) {
 
 // ---------------- Telesales KYC (identity, editable name/phone/national id) ----------------
 function TelesalesKyc({ lead, channelLabel, projectName, currentUser, onChanged }: {
-  lead: CrmLead; channelLabel: string; projectName: string; currentUser: { name: string }; onChanged: () => void
+  lead: CrmLead; channelLabel: string; projectName: string; currentUser: { id: string; name: string }; onChanged: () => void
 }) {
   const [name, setName] = useState(lead.name)
   const [phone, setPhone] = useState(lead.phone)
@@ -136,7 +136,7 @@ function TelesalesKyc({ lead, channelLabel, projectName, currentUser, onChanged 
   async function save() {
     if (!name.trim() || !phone.trim()) { toast.error('Name and phone are required'); return }
     setSaving(true)
-    await updateLead(lead.id, { name: name.trim(), phone: phone.trim(), customer_national_id: nid.trim() || null }, currentUser.name, 'KYC updated')
+    await updateLead(lead.id, { name: name.trim(), phone: phone.trim(), customer_national_id: nid.trim() || null }, currentUser.name, 'KYC updated', currentUser.id)
     setSaving(false)
     toast.success('KYC saved')
     onChanged()
@@ -172,7 +172,7 @@ function TelesalesKyc({ lead, channelLabel, projectName, currentUser, onChanged 
 
 // ---------------- Direct Sales KYC (fetched + vehicle/program + ID + credit) ----------------
 function DirectSalesKyc({ lead, channelLabel, projectName, currentUser, onChanged, onClose }: {
-  lead: CrmLead; channelLabel: string; projectName: string; currentUser: { name: string }; onChanged: () => void; onClose: () => void
+  lead: CrmLead; channelLabel: string; projectName: string; currentUser: { id: string; name: string }; onChanged: () => void; onClose: () => void
 }) {
   const [downPayment, setDownPayment] = useState(lead.down_payment_bracket ?? '')
   const [brand, setBrand] = useState(lead.requested_car_brand ?? '')
@@ -195,7 +195,7 @@ function DirectSalesKyc({ lead, channelLabel, projectName, currentUser, onChange
       car_source: (source || 'dealer') as CrmLead['car_source'],
       expected_program: (program || null) as CrmLead['expected_program'],
       id_document_url: docUrl.trim() || null,
-    }, currentUser.name, 'Direct Sales KYC updated')
+    }, currentUser.name, 'Direct Sales KYC updated', currentUser.id)
     setSavingKyc(false)
     toast.success('KYC saved')
     onChanged()
@@ -209,7 +209,7 @@ function DirectSalesKyc({ lead, channelLabel, projectName, currentUser, onChange
       requested_car_model: model.trim() || null, requested_car_year: year ? Number(year) : null,
       car_source: (source || 'dealer') as CrmLead['car_source'], expected_program: (program || null) as CrmLead['expected_program'],
       id_document_url: docUrl.trim(), stage: 'credit_submitted',
-    }, currentUser.name, 'Documents collected → submitted to Credit')
+    }, currentUser.name, 'Documents collected → submitted to Credit', currentUser.id)
     setSubmitting(false)
     toast.success('Submitted to Credit')
     onChanged(); onClose()
@@ -373,7 +373,7 @@ function CallAttemptsPanel({ lead, stage, attempts, currentUser, onLogged }: {
   )
 }
 
-function QualifyPanel({ lead, currentUser, onDone }: { lead: CrmLead; currentUser: { name: string }; onDone: () => void }) {
+function QualifyPanel({ lead, currentUser, onDone }: { lead: CrmLead; currentUser: { id: string; name: string }; onDone: () => void }) {
   const [f, setF] = useState<QualificationInput>({
     salary_bracket: lead.salary_bracket ?? '', down_payment_bracket: lead.down_payment_bracket ?? '',
     financing_program: lead.financing_program ?? 'new_car', car_source: lead.car_source ?? 'dealer',
@@ -390,7 +390,7 @@ function QualifyPanel({ lead, currentUser, onDone }: { lead: CrmLead; currentUse
     setTouched(true)
     if (!f.salary_bracket || !f.down_payment_bracket || !f.occupation) { toast.error('Fill salary, down payment, occupation'); return }
     setSaving(true)
-    await qualifyLead(lead.id, f, currentUser.name)
+    await qualifyLead(lead.id, f, currentUser.name, currentUser.id)
     setSaving(false)
     toast.success('Qualified — sent to Direct Sales')
     onDone()
@@ -432,12 +432,12 @@ function QualifyPanel({ lead, currentUser, onDone }: { lead: CrmLead; currentUse
   )
 }
 
-function DispositionPanel({ lead, stage, currentUser, onDone }: { lead: CrmLead; stage: CallStage; currentUser: { name: string }; onDone: () => void }) {
+function DispositionPanel({ lead, stage, currentUser, onDone }: { lead: CrmLead; stage: CallStage; currentUser: { id: string; name: string }; onDone: () => void }) {
   const [busy, setBusy] = useState(false)
   async function dispose(d: Disposition) {
     const note = d === 'unqualified' ? (window.prompt('Reason?') ?? '') : ''
     setBusy(true)
-    await setDisposition(lead.id, stage, d, note, currentUser.name)
+    await setDisposition(lead.id, stage, d, note, currentUser.name, currentUser.id)
     setBusy(false)
     toast.success(`Marked ${d}`)
     onDone()

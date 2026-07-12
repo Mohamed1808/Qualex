@@ -246,3 +246,40 @@ export interface LeadFilter {
   campaign?: string
   search?: string
 }
+
+// ============================================================================
+// Agent activity log — SLA tracking. Every timestamped action an agent (or
+// supervisor/admin) takes is recorded here. Never surfaced in agent-facing
+// screens; only the Activity Log page (supervisor/admin nav) reads it.
+// ============================================================================
+export type ActivityCategory =
+  | 'attendance'
+  | 'call_attempt'
+  | 'qualify'
+  | 'disposition'
+  | 'kyc_update'
+  | 'credit_submit'
+  | 'credit_decision'
+  | 'reminder'
+  | 'reassignment'
+  | 'assignment'
+  | 'comment'
+
+export interface ActivityLogEntry {
+  id: string
+  user_id: string | null
+  user_name: string
+  role: UserRole | null
+  category: ActivityCategory
+  action: string
+  lead_id: string | null
+  lead_name: string | null
+  at: string
+}
+
+export interface ActivityFilter {
+  user_id?: string
+  category?: ActivityCategory
+  from?: string
+  to?: string
+}

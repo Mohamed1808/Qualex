@@ -21,10 +21,11 @@ import type {
   LeadStatus, Project, Team, CrmUser, CrmLead, LeadComment, LeadReminder,
   LeadHistoryEntry, DistributionSchedule, LeadFilter, WhatsAppMessage,
   Attendance, CallAttempt, CallStage, CallOutcome, Disposition, LeadStage,
+  ActivityLogEntry, ActivityCategory, ActivityFilter,
 } from './types'
 
-// v4: added channels/campaign/KYC/vehicle/auto-callback fields — bump to reseed.
-const KEY = 'qualex-crm-v4'
+// v5: added the hidden agent activity log (SLA tracking) — bump to reseed.
+const KEY = 'qualex-crm-v5'
 
 interface Store {
   statuses: LeadStatus[]
@@ -39,6 +40,7 @@ interface Store {
   whatsapp: WhatsAppMessage[]
   attendance: Attendance[]
   callAttempts: CallAttempt[]
+  activityLog: ActivityLogEntry[]
 }
 
 function seed(): Store {
@@ -58,6 +60,7 @@ function seed(): Store {
       actor_name: 'System', type: 'created' as const, detail: 'Lead created',
     })),
     whatsapp: [],
+    activityLog: [],
   }
 }
 
@@ -250,6 +253,9 @@ export async function addComment(leadId: string, authorId: string, authorName: s
   const comment: LeadComment = { id: uid(), lead_id: leadId, author_id: authorId, author_name: authorName, body, created_at: now() }
   s.comments.push(comment)
   s.history.push({ id: uid(), lead_id: leadId, at: now(), actor_name: authorName, type: 'comment', detail: body })
+  const actorInfo = resolveUserById(s, authorId)
+  const leadForLog = s.leads.find((l) => l.id === leadId)
+  logActivity(s, { userId: actorInfo.id, userName: authorName, role: actorInfo.role, category: 'comment', action: body, leadId, leadName: leadForLog?.name })
   write(s)
   return delay(comment)
 }
@@ -265,6 +271,9 @@ export async function scheduleReminder(userId: string, leadId: string, remindAt:
   const s = read()
   const reminder: LeadReminder = { id: uid(), user_id: userId, lead_id: leadId, remind_at: remindAt, note, is_sent: false }
   s.reminders.push(reminder)
+  const actorInfo = resolveUserById(s, userId)
+  const leadForLog = s.leads.find((l) => l.id === leadId)
+  logActivity(s, { userId: actorInfo.id, userName: actorInfo.name, role: actorInfo.role, category: 'reminder', action: `Scheduled a reminder for ${new Date(remindAt).toLocaleString()}`, leadId, leadName: leadForLog?.name })
   write(s)
   return delay(reminder)
 }
@@ -342,12 +351,49 @@ function logHistory(s: Store, leadId: string, actor: string, type: LeadHistoryEn
   s.history.push({ id: uid(), lead_id: leadId, at: now(), actor_name: actor, type, detail })
 }
 
+// ---- hidden agent activity log (SLA tracking) --------------------------
+// Never read by agent-facing screens; only the supervisor/admin Activity Log
+// page calls listActivityLog. Every timestamp here is captured at the moment
+// the action actually happened, so supervisors can measure real response
+// times (e.g. time from assignment to first call attempt).
+function logActivity(
+  s: Store,
+  opts: { userId: string | null; userName: string; role: CrmUser['role'] | null; category: ActivityCategory; action: string; leadId?: string | null; leadName?: string | null },
+) {
+  s.activityLog.push({
+    id: uid(), user_id: opts.userId, user_name: opts.userName, role: opts.role,
+    category: opts.category, action: opts.action,
+    lead_id: opts.leadId ?? null, lead_name: opts.leadName ?? null, at: now(),
+  })
+}
+function resolveUserById(s: Store, userId: string | null | undefined): { id: string | null; name: string; role: CrmUser['role'] | null } {
+  const u = userId ? s.users.find((x) => x.id === userId) : undefined
+  return u ? { id: u.id, name: u.full_name, role: u.role } : { id: userId ?? null, name: userId ?? 'Unknown', role: null }
+}
+/** Best-effort id/role lookup when only a display name is available (supervisor actions). */
+function resolveUserByName(s: Store, name: string): { id: string | null; name: string; role: CrmUser['role'] | null } {
+  const u = s.users.find((x) => x.full_name === name)
+  return u ? { id: u.id, name: u.full_name, role: u.role } : { id: null, name, role: null }
+}
+
+export async function listActivityLog(filter: ActivityFilter = {}): Promise<ActivityLogEntry[]> {
+  let rows = read().activityLog
+  if (filter.user_id) rows = rows.filter((r) => r.user_id === filter.user_id)
+  if (filter.category) rows = rows.filter((r) => r.category === filter.category)
+  if (filter.from) rows = rows.filter((r) => r.at >= filter.from!)
+  if (filter.to) rows = rows.filter((r) => r.at <= filter.to!)
+  return delay(rows.sort((a, b) => b.at.localeCompare(a.at)))
+}
+
 /** Supervisor assigns a lead to a telesales agent. */
 export async function assignTelesales(leadId: string, agentId: string, actor: string): Promise<void> {
   const s = read()
   const agent = s.users.find((u) => u.id === agentId)
   patchLead(s, leadId, { stage: 'telesales_assigned', assigned_telesales_agent: agentId, assigned_user_id: agentId, tele_sla_due_at: slaDue(SLA_TELE_HOURS), tele_sla_breached: false })
   logHistory(s, leadId, actor, 'assignment', `Assigned to telesales ${agent?.full_name ?? agentId}`)
+  const actorInfo = resolveUserByName(s, actor)
+  const leadForLog = s.leads.find((l) => l.id === leadId)
+  logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'assignment', action: `Assigned to telesales ${agent?.full_name ?? agentId}`, leadId, leadName: leadForLog?.name })
   write(s); return delay(undefined)
 }
 
@@ -357,6 +403,9 @@ export async function assignDirectSales(leadId: string, agentId: string, actor: 
   const agent = s.users.find((u) => u.id === agentId)
   patchLead(s, leadId, { stage: 'ds_assigned', assigned_direct_sales_agent: agentId, assigned_user_id: agentId, direct_sales_assigned_at: now(), ds_sla_due_at: slaDue(SLA_DS_HOURS), ds_sla_breached: false })
   logHistory(s, leadId, actor, 'assignment', `Assigned to direct sales ${agent?.full_name ?? agentId}`)
+  const actorInfo = resolveUserByName(s, actor)
+  const leadForLog = s.leads.find((l) => l.id === leadId)
+  logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'assignment', action: `Assigned to direct sales ${agent?.full_name ?? agentId}`, leadId, leadName: leadForLog?.name })
   write(s); return delay(undefined)
 }
 
@@ -370,16 +419,20 @@ export interface QualificationInput {
 }
 
 /** Telesales qualifies a lead → moves to DS supervisor's unassigned queue. */
-export async function qualifyLead(leadId: string, qual: QualificationInput, actor: string): Promise<void> {
+export async function qualifyLead(leadId: string, qual: QualificationInput, actor: string, actorId?: string): Promise<void> {
   const s = read()
+  const leadForLog = s.leads.find((l) => l.id === leadId)
   patchLead(s, leadId, { ...qual, stage: 'qualified', tele_disposition: 'qualified', telesales_qualified_at: now(), assigned_user_id: null })
   logHistory(s, leadId, actor, 'status_change', 'Qualified by telesales → sent to Direct Sales')
+  const actorInfo = resolveUserById(s, actorId)
+  logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'qualify', action: 'Qualified lead — sent to Direct Sales', leadId, leadName: leadForLog?.name })
   write(s); return delay(undefined)
 }
 
 /** Apply a disposition at either stage (mirrors the old pipeline transitions). */
-export async function setDisposition(leadId: string, stage: CallStage, disposition: Disposition, notes: string, actor: string): Promise<void> {
+export async function setDisposition(leadId: string, stage: CallStage, disposition: Disposition, notes: string, actor: string, actorId?: string): Promise<void> {
   const s = read()
+  const leadForLog = s.leads.find((l) => l.id === leadId)
   const patch: Partial<CrmLead> = {}
   let to: LeadStage | null = null
   if (stage === 'telesales') {
@@ -398,6 +451,8 @@ export async function setDisposition(leadId: string, stage: CallStage, dispositi
   if (to) patch.stage = to
   patchLead(s, leadId, patch)
   if (to) logHistory(s, leadId, actor, 'status_change', `Disposition: ${disposition}${notes ? ` — ${notes}` : ''}`)
+  const actorInfo = resolveUserById(s, actorId)
+  logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'disposition', action: `Disposition: ${disposition}${notes ? ` — ${notes}` : ''}`, leadId, leadName: leadForLog?.name })
   write(s); return delay(undefined)
 }
 
@@ -418,10 +473,14 @@ export async function logCallAttempt(
   const list = s.callAttempts.filter((c) => c.lead_id === leadId && c.stage === stage).sort((a, b) => a.attempt_number - b.attempt_number)
   let streak = 0
   for (let i = list.length - 1; i >= 0; i--) { if (list[i].outcome === 'no_answer') streak++; else break }
+  const leadForLog = s.leads.find((l) => l.id === leadId)
+  const actorInfo = resolveUserById(s, agentId)
+
   // After 3 no-answers (each with its scheduled callback), a further no-answer terminates.
   if (streak >= 3) {
     patchLead(s, leadId, { stage: 'terminated', callback_locked: true, next_callback_at: null })
     logHistory(s, leadId, agentName, 'status_change', 'Auto-terminated after 3 no-answers and callbacks elapsed')
+    logActivity(s, { userId: actorInfo.id, userName: agentName, role: actorInfo.role, category: 'call_attempt', action: 'Lead auto-terminated after 3 no-answers', leadId, leadName: leadForLog?.name })
     write(s)
     return delay({ ok: false, terminated: true, error: 'Lead auto-terminated after 3 no-answers.' })
   }
@@ -457,6 +516,7 @@ export async function logCallAttempt(
     ? `Call attempt ${nextNo}: answered — ${answeredCategory.replace(/_/g, ' ')}${notes ? ` (${notes})` : ''}`
     : `Call attempt ${nextNo}: ${outcome}${notes ? ` — ${notes}` : ''}`
   logHistory(s, leadId, agentName, 'contact', detail)
+  logActivity(s, { userId: actorInfo.id, userName: agentName, role: actorInfo.role, category: 'call_attempt', action: detail, leadId, leadName: leadForLog?.name })
   write(s); return delay({ ok: true, unreachable, autoCallbackAt })
 }
 
@@ -466,7 +526,7 @@ export async function logCallAttempt(
  * lead back to the appropriate assigned stage for the target agent's team.
  */
 export async function reassignWithComment(
-  leadId: string, toUserId: string, comment: string, actor: string,
+  leadId: string, toUserId: string, comment: string, actor: string, actorId?: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const s = read()
   const lead = s.leads.find((l) => l.id === leadId)
@@ -496,6 +556,8 @@ export async function reassignWithComment(
     s.comments.push({ id: uid(), lead_id: leadId, author_id: 'supervisor', author_name: actor, body: comment.trim(), created_at: now() })
   }
   logHistory(s, leadId, actor, 'assignment', `Reassigned to ${target.full_name}${comment.trim() ? ` — ${comment.trim()}` : ''}`)
+  const actorInfo = resolveUserById(s, actorId)
+  logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'reassignment', action: `Reassigned to ${target.full_name}${comment.trim() ? ` — ${comment.trim()}` : ''}`, leadId, leadName: lead.name })
   write(s); return delay({ ok: true })
 }
 
@@ -548,6 +610,10 @@ export async function autoAssignBalanced(actor: string, leadIds?: string[]): Pro
     s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: actor, type: 'assignment', detail: `Auto-assigned (random, checked-in, <${MAX_LEADS_PER_AGENT} leads) to ${pick.full_name}` })
     assigned++
   }
+  if (assigned > 0) {
+    const actorInfo = resolveUserByName(s, actor)
+    logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'assignment', action: `Auto-assigned ${assigned} lead(s) (random, checked-in agents under ${MAX_LEADS_PER_AGENT} leads)` })
+  }
   write(s)
   return delay({ assigned, skipped, reason: skipped > 0 ? `${skipped} lead(s) left unassigned — all checked-in agents are at the ${MAX_LEADS_PER_AGENT}-lead cap.` : undefined })
 }
@@ -569,6 +635,10 @@ export async function bulkAssign(leadIds: string[], toUserId: string, actor: str
     s.history.push({ id: uid(), lead_id: id, at: now(), actor_name: actor, type: 'assignment', detail: `Bulk-assigned to ${target.full_name}` })
     count++
   }
+  if (count > 0) {
+    const actorInfo = resolveUserByName(s, actor)
+    logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'assignment', action: `Bulk-assigned ${count} lead(s) to ${target.full_name}` })
+  }
   write(s); return delay(count)
 }
 
@@ -583,31 +653,42 @@ export async function getAttendance(userId: string): Promise<Attendance> {
 export async function listAttendance(): Promise<Attendance[]> {
   return delay(read().attendance.filter((a) => a.date === today()))
 }
-async function mutateAttendance(userId: string, fn: (a: Attendance) => void): Promise<void> {
+async function mutateAttendance(userId: string, fn: (a: Attendance) => void, action: string): Promise<void> {
   const s = read()
   let a = s.attendance.find((x) => x.user_id === userId && x.date === today())
   if (!a) { a = { user_id: userId, date: today(), checked_in: false, checked_in_at: null, checked_out: false, checked_out_at: null, on_break: false, break_log: [] }; s.attendance.push(a) }
   fn(a)
+  const actorInfo = resolveUserById(s, userId)
+  logActivity(s, { userId: actorInfo.id, userName: actorInfo.name, role: actorInfo.role, category: 'attendance', action })
   write(s); return delay(undefined)
 }
-export const checkIn = (userId: string) => mutateAttendance(userId, (a) => { a.checked_in = true; a.checked_in_at = now(); a.checked_out = false; a.checked_out_at = null })
-export const checkOut = (userId: string) => mutateAttendance(userId, (a) => { a.checked_out = true; a.checked_out_at = now(); a.on_break = false })
-export const startBreak = (userId: string) => mutateAttendance(userId, (a) => { a.on_break = true; a.break_log.push({ started_at: now(), ended_at: null }) })
-export const endBreak = (userId: string) => mutateAttendance(userId, (a) => { a.on_break = false; const last = a.break_log[a.break_log.length - 1]; if (last && !last.ended_at) last.ended_at = now() })
+export const checkIn = (userId: string) => mutateAttendance(userId, (a) => { a.checked_in = true; a.checked_in_at = now(); a.checked_out = false; a.checked_out_at = null }, 'Checked in')
+export const checkOut = (userId: string) => mutateAttendance(userId, (a) => { a.checked_out = true; a.checked_out_at = now(); a.on_break = false }, 'Checked out')
+export const startBreak = (userId: string) => mutateAttendance(userId, (a) => { a.on_break = true; a.break_log.push({ started_at: now(), ended_at: null }) }, 'Started break')
+export const endBreak = (userId: string) => mutateAttendance(userId, (a) => { a.on_break = false; const last = a.break_log[a.break_log.length - 1]; if (last && !last.ended_at) last.ended_at = now() }, 'Ended break')
 
 // ---- credit decision ----
-export async function recordCreditDecision(leadId: string, decision: 'approved' | 'rejected', note: string, actor: string): Promise<void> {
+export async function recordCreditDecision(leadId: string, decision: 'approved' | 'rejected', note: string, actor: string, actorId?: string): Promise<void> {
   const s = read()
+  const leadForLog = s.leads.find((l) => l.id === leadId)
   patchLead(s, leadId, { stage: decision, ds_disposition: decision === 'approved' ? 'qualified' : 'unqualified', unqualification_reason: decision === 'rejected' ? (note || 'Credit rejected') : null })
   logHistory(s, leadId, actor, 'status_change', `Credit ${decision}${note ? ` — ${note}` : ''}`)
+  const actorInfo = resolveUserById(s, actorId)
+  logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'credit_decision', action: `Credit ${decision}${note ? ` — ${note}` : ''}`, leadId, leadName: leadForLog?.name })
   write(s); return delay(undefined)
 }
 
 /** Update arbitrary lead fields (qualification edits, doc URL, etc.). */
-export async function updateLead(leadId: string, patch: Partial<CrmLead>, actor?: string, detail?: string): Promise<void> {
+export async function updateLead(leadId: string, patch: Partial<CrmLead>, actor?: string, detail?: string, actorId?: string): Promise<void> {
   const s = read()
+  const leadForLog = s.leads.find((l) => l.id === leadId)
   patchLead(s, leadId, patch)
-  if (actor && detail) logHistory(s, leadId, actor, 'status_change', detail)
+  if (actor && detail) {
+    logHistory(s, leadId, actor, 'status_change', detail)
+    const actorInfo = resolveUserById(s, actorId)
+    const category: ActivityCategory = patch.stage === 'credit_submitted' ? 'credit_submit' : 'kyc_update'
+    logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category, action: detail, leadId, leadName: leadForLog?.name })
+  }
   write(s); return delay(undefined)
 }
 
