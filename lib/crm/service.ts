@@ -504,36 +504,52 @@ export async function reassignWithComment(
  * agents, balancing by current open-lead count (least-loaded first), with a
  * shuffle so ties are distributed randomly.
  */
-export async function autoAssignBalanced(actor: string, leadIds?: string[]): Promise<number> {
-  const s = read()
-  const agents = s.users.filter((u) => u.role === 'telesales_agent' && u.is_active)
-  if (agents.length === 0) return delay(0)
+const MAX_LEADS_PER_AGENT = 20
 
-  // current open (telesales-stage) load per agent
-  const TELE_STAGES = ['telesales_assigned', 'telesales_in_progress']
+/**
+ * Auto-assign unassigned "new" telesales leads to agents who are:
+ *   1. Checked in today (and not checked out), and
+ *   2. Currently holding fewer than MAX_LEADS_PER_AGENT active leads.
+ * Among those eligible agents, assignment is random (not least-loaded first) —
+ * each lead independently picks a random eligible agent, re-checking the cap
+ * as it fills up so no one crosses the limit during this run.
+ */
+export async function autoAssignBalanced(actor: string, leadIds?: string[]): Promise<{ assigned: number; skipped: number; reason?: string }> {
+  const s = read()
+  const today = new Date().toISOString().slice(0, 10)
+  const checkedInIds = new Set(
+    s.attendance.filter((a) => a.date === today && a.checked_in && !a.checked_out).map((a) => a.user_id)
+  )
+  const agents = s.users.filter((u) => u.role === 'telesales_agent' && u.is_active && checkedInIds.has(u.id))
+  if (agents.length === 0) return delay({ assigned: 0, skipped: 0, reason: 'No telesales agents are currently checked in.' })
+
+  // current active-lead load per agent (any non-terminal telesales stage they hold)
+  const ACTIVE_STAGES = ['telesales_assigned', 'telesales_in_progress']
   const load: Record<string, number> = {}
-  for (const a of agents) load[a.id] = s.leads.filter((l) => l.assigned_telesales_agent === a.id && TELE_STAGES.includes(l.stage)).length
+  for (const a of agents) load[a.id] = s.leads.filter((l) => l.assigned_telesales_agent === a.id && ACTIVE_STAGES.includes(l.stage)).length
 
   let pool = s.leads.filter((l) => l.stage === 'new' && !l.assigned_user_id)
   if (leadIds) pool = pool.filter((l) => leadIds.includes(l.id))
-  // shuffle the pool for randomness
+  // shuffle the pool so assignment order doesn't bias results
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[pool[i], pool[j]] = [pool[j], pool[i]] }
 
   let assigned = 0
+  let skipped = 0
   for (const lead of pool) {
-    // pick least-loaded agent (ties broken randomly by prior shuffle of agents)
-    const shuffled = [...agents].sort(() => Math.random() - 0.5)
-    const best = shuffled.reduce((b, a) => (load[a.id] < load[b.id] ? a : b))
-    lead.assigned_user_id = best.id
-    lead.assigned_telesales_agent = best.id
+    const eligible = agents.filter((a) => load[a.id] < MAX_LEADS_PER_AGENT)
+    if (eligible.length === 0) { skipped++; continue } // everyone checked-in is at/over the cap
+    const pick = eligible[Math.floor(Math.random() * eligible.length)]
+    lead.assigned_user_id = pick.id
+    lead.assigned_telesales_agent = pick.id
     lead.stage = 'telesales_assigned'
     lead.tele_sla_due_at = slaDue(SLA_TELE_HOURS)
     lead.updated_at = now()
-    load[best.id]++
-    s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: actor, type: 'assignment', detail: `Auto-assigned (balanced) to ${best.full_name}` })
+    load[pick.id]++
+    s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: actor, type: 'assignment', detail: `Auto-assigned (random, checked-in, <${MAX_LEADS_PER_AGENT} leads) to ${pick.full_name}` })
     assigned++
   }
-  write(s); return delay(assigned)
+  write(s)
+  return delay({ assigned, skipped, reason: skipped > 0 ? `${skipped} lead(s) left unassigned — all checked-in agents are at the ${MAX_LEADS_PER_AGENT}-lead cap.` : undefined })
 }
 
 /** Assign a specific set of leads to one agent (bulk assign from a filter). */

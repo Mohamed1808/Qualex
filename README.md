@@ -1,148 +1,83 @@
-# Qualex — Drive Finance Lead Management System
+# Qualex — Drive Finance CRM (Frontend)
 
-A production-grade Automotive Finance Lead Management System built with Next.js 14, Supabase, and Tailwind CSS.
+A frontend-only Automotive Finance Lead Management CRM, built with Next.js 14 +
+TypeScript + Tailwind CSS. This repository contains **no backend and no
+database** — see [DATABASE.md](./DATABASE.md) for the schema the backend team
+should implement, and the "Backend Handoff" section below for how it plugs in.
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS + shadcn/ui
-- **Backend**: Supabase (PostgreSQL + Auth + Realtime + Storage)
-- **State**: TanStack Query v5 + Zustand
+- **Framework**: Next.js 14 (App Router) + TypeScript + Tailwind CSS
 - **Forms**: React Hook Form + Zod
-- **Charts**: Recharts
-- **Dates**: date-fns + date-fns-tz (Cairo/Africa timezone)
 - **Toasts**: Sonner
+- **CSV**: PapaParse / xlsx (client-side import/export)
+- **Dates**: date-fns + date-fns-tz
 
-## Setup Guide
+There is **no database, no auth provider, and no server** in this repo. All
+data currently lives in the browser's `localStorage`, seeded from
+`lib/crm/mock-data.ts`, purely so the UI is fully interactive to click through
+and demo.
 
-### 1. Clone the repository
+## Running locally
 
 ```bash
-git clone <repo-url>
-cd qualex
 npm install
-```
-
-### 2. Create a Supabase project
-
-1. Go to [supabase.com](https://supabase.com) and create a new project
-2. Wait for the project to provision
-3. Note your **Project URL** and **Anon Key** from Settings → API
-
-### 3. Run migrations in order
-
-Go to the Supabase SQL Editor and run each migration file in sequence:
-
-```
-supabase/migrations/001_initial_schema.sql
-supabase/migrations/002_rls_policies.sql
-supabase/migrations/003_triggers.sql
-supabase/migrations/004_seed.sql
-```
-
-### 4. Set environment variables
-
-Copy `.env.example` to `.env.local` and fill in the values:
-
-```bash
-cp .env.example .env.local
-```
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-INTAKE_WEBHOOK_SECRET=generate-a-random-secret
-CRON_SECRET=generate-another-random-secret
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
-
-**Important**: `SUPABASE_SERVICE_ROLE_KEY` is server-only and should NEVER be exposed to the client.
-
-### 5. Create Supabase Storage bucket
-
-In Supabase Dashboard → Storage, create a bucket named `id-documents` with public access.
-
-### 6. Create the first admin user
-
-In Supabase Dashboard → Authentication → Users, create a user. Then in SQL Editor:
-
-```sql
-INSERT INTO profiles (id, full_name, role)
-VALUES ('your-user-uuid', 'Admin User', 'admin')
-ON CONFLICT (id) DO UPDATE SET role = 'admin';
-```
-
-### 7. Run the development server
-
-```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). You will be redirected to `/login`.
+Open [http://localhost:3000](http://localhost:3000) — it redirects into the
+CRM at `/crm/login`.
 
----
+### Demo login
 
-## Deployment to Vercel
+The login screen lists demo accounts (any password works) covering every
+role: admin, telesales supervisor/agent, direct sales supervisor/agent. See
+`lib/crm/mock-data.ts` (`SEED_USERS`) for the full list.
 
-### 1. Connect to Vercel
+## Project structure
 
-```bash
-npm i -g vercel
-vercel
+```
+app/crm/                  Next.js routes (one per screen)
+components/crm/           All CRM UI components
+components/crm/ui/        Shared primitives (Skeleton, EmptyState, Pill, etc.)
+lib/crm/types.ts          Every data shape the frontend expects
+lib/crm/mock-data.ts      Seed/demo data only — safe to delete once wired to a real API
+lib/crm/service.ts        *** THE BACKEND INTEGRATION SEAM (see below) ***
+lib/crm/session.ts        Mock auth (email-only login) — replace with real auth
+lib/crm/constants.ts      Shared enums/labels (channels, programs, etc.)
 ```
 
-### 2. Set environment variables in Vercel
+## Backend Handoff
 
-Go to your Vercel project → Settings → Environment Variables and add all variables from `.env.local`.
+**`lib/crm/service.ts` is the single integration point.** Every screen in the
+app calls the ~40 exported async functions in that file (`listLeads`,
+`createLead`, `assignTelesales`, `logCallAttempt`, `recordCreditDecision`, …).
+Today each function reads/writes an in-browser `localStorage` object seeded
+from `mock-data.ts`. To connect a real backend:
 
-### 3. Cron job configuration
+1. Stand up the database described in [DATABASE.md](./DATABASE.md) (Postgres
+   schema, enums, and indexes are spelled out — plus notes for adapting to
+   another engine).
+2. Build API endpoints (REST, or Server Actions if moving this into a
+   full-stack Next.js app) that match each function's inputs/outputs.
+3. Replace each function body in `lib/crm/service.ts` with a `fetch(...)`
+   call (or direct DB call) to the new endpoint. **No other file needs to
+   change** — every component only imports from this module.
+4. Replace `lib/crm/session.ts` with real authentication (the mock login
+   currently just matches an email against the seed user list).
+5. Implement the background jobs listed at the end of DATABASE.md (SLA
+   breach checks, scheduled lead distribution, reminder firing, WhatsApp
+   Business API integration).
 
-The `vercel.json` file configures a cron job that runs the SLA checker every 5 minutes:
-
-```json
-{
-  "crons": [
-    {
-      "path": "/api/sla/cron",
-      "schedule": "*/5 * * * *"
-    }
-  ]
-}
-```
-
-The cron job hits `/api/sla/cron` with an `Authorization: Bearer <CRON_SECRET>` header. Vercel cron jobs on Pro plans automatically pass the `CRON_SECRET` environment variable.
-
----
+Once the seam is real, `lib/crm/mock-data.ts` and the localStorage
+persistence in `service.ts` can be deleted entirely.
 
 ## User Roles
 
-| Role | Portal | Access |
-|------|--------|--------|
-| `telesales_agent` | `/telesales/agent` | Own assigned leads |
-| `telesales_supervisor` | `/telesales/supervisor` | All telesales leads + attendance |
-| `direct_sales_agent` | `/direct-sales/agent` | Own DS leads |
-| `direct_sales_supervisor` | `/direct-sales/supervisor` | All DS leads + analytics |
-| `admin` | `/admin` | Full system access |
-
-## Webhook Integration
-
-Send leads from external sources via the intake webhook:
-
-```bash
-POST /api/webhooks/intake
-Headers:
-  x-webhook-secret: your-webhook-secret
-  Content-Type: application/json
-
-Body:
-{
-  "name": "Ahmed Mohamed",
-  "phone": "01012345678",
-  "channel": "whatsapp",
-  "requested_car_brand": "Toyota",
-  "requested_car_year": 2024,
-  "source_campaign": "Summer2025"
-}
-```
-
-Response `201` for new leads, `200` for duplicates.
+| Role | Portal |
+|------|--------|
+| `telesales_agent` | My Queue — work assigned leads |
+| `telesales_supervisor` | Telesales queue, analytics, attendance, duplicates |
+| `direct_sales_agent` | My Queue — work assigned leads |
+| `direct_sales_supervisor` | Direct Sales queue, analytics, attendance, credit |
+| `admin` | Full system access — users, projects, teams, statuses, lead management |

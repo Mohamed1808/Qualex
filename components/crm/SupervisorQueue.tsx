@@ -91,9 +91,10 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
   }
 
   async function runAutoAssign() {
-    const n = await autoAssignBalanced(CURRENT.name)
-    if (n === 0) toast.info('No unassigned "new" leads to distribute')
-    else toast.success(`Auto-assigned ${n} lead(s) across agents`)
+    const res = await autoAssignBalanced(CURRENT.name)
+    if (res.assigned === 0 && res.skipped === 0) toast.info('No unassigned "new" leads to distribute')
+    else if (res.assigned === 0) toast.error(res.reason ?? 'Could not assign any leads')
+    else toast.success(`Auto-assigned ${res.assigned} lead(s) across checked-in agents${res.skipped ? ` — ${res.reason}` : ''}`)
     reload()
   }
 
@@ -107,7 +108,8 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
         title={`${label} Live Queue`}
         subtitle={`${filtered.length} of ${leads.length} leads`}
         action={team === 'telesales' ? (
-          <button onClick={runAutoAssign} className="bg-[#5757e6] hover:bg-[#4444cc] text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors">
+          <button onClick={runAutoAssign} title="Randomly distributes new leads to checked-in agents holding fewer than 20 active leads"
+            className="bg-[#5757e6] hover:bg-[#4444cc] text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors">
             ⚡ Auto-assign new leads
           </button>
         ) : undefined}
