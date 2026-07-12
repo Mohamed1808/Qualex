@@ -1,25 +1,46 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import type { CrmLead, LeadStatus } from '@/lib/crm/types'
-import { listLeads, listStatuses } from '@/lib/crm/service'
+import type { CrmLead, LeadStatus, CrmUser } from '@/lib/crm/types'
+import { listLeads, listStatuses, listUsers } from '@/lib/crm/service'
+import PageHeader from './ui/PageHeader'
+import Funnel from './ui/Funnel'
+import { CardSkeleton } from './ui/Skeleton'
 
 const QUALIFIED_PLUS = ['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted', 'approved', 'rejected']
 
 export default function CrmAnalytics({ team }: { team: 'telesales' | 'direct_sales' }) {
-  const [leads, setLeads] = useState<CrmLead[]>([])
+  const [allLeads, setAllLeads] = useState<CrmLead[]>([])
   const [statuses, setStatuses] = useState<LeadStatus[]>([])
-  useEffect(() => { listLeads().then(setLeads); listStatuses().then(setStatuses) }, [])
+  const [users, setUsers] = useState<CrmUser[]>([])
+  const [loading, setLoading] = useState(true)
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+
+  useEffect(() => {
+    Promise.all([listLeads(), listStatuses(), listUsers()]).then(([l, s, u]) => {
+      setAllLeads(l); setStatuses(s); setUsers(u); setLoading(false)
+    })
+  }, [])
+
+  const leads = useMemo(() => {
+    if (!from && !to) return allLeads
+    return allLeads.filter((l) => {
+      if (from && l.created_at < from) return false
+      if (to && l.created_at > `${to}T23:59:59`) return false
+      return true
+    })
+  }, [allLeads, from, to])
 
   const kpis = useMemo(() => {
     const total = leads.length
     const qualified = leads.filter((l) => QUALIFIED_PLUS.includes(l.stage)).length
     const approved = leads.filter((l) => l.stage === 'approved').length
-    const reached = leads.filter((l) => l.stage !== 'new').length
-    return { total, qualified, approved, qualRate: reached ? Math.round((qualified / reached) * 100) : 0 }
+    const conversion = total ? Math.round((approved / total) * 100) : 0
+    return { total, qualified, approved, conversion }
   }, [leads])
 
-  const funnel = useMemo(() => ([
+  const funnelSteps = useMemo(() => ([
     { label: 'Captured', value: leads.length },
     { label: 'Reached', value: leads.filter((l) => l.stage !== 'new').length },
     { label: 'Qualified', value: leads.filter((l) => QUALIFIED_PLUS.includes(l.stage)).length },
@@ -27,7 +48,6 @@ export default function CrmAnalytics({ team }: { team: 'telesales' | 'direct_sal
     { label: 'Submitted to Credit', value: leads.filter((l) => ['credit_submitted', 'approved', 'rejected'].includes(l.stage)).length },
     { label: 'Approved', value: leads.filter((l) => l.stage === 'approved').length },
   ]), [leads])
-  const max = Math.max(1, ...funnel.map((f) => f.value))
 
   const statusCounts = useMemo(() => {
     const c: Record<string, number> = {}
@@ -35,49 +55,101 @@ export default function CrmAnalytics({ team }: { team: 'telesales' | 'direct_sal
     return c
   }, [leads])
 
+  const roleFilter = team === 'telesales' ? 'telesales_agent' : 'direct_sales_agent'
+  const leaderboard = useMemo(() => {
+    const agents = users.filter((u) => u.role === roleFilter)
+    return agents.map((a) => {
+      const owned = leads.filter((l) => (team === 'telesales' ? l.assigned_telesales_agent : l.assigned_direct_sales_agent) === a.id)
+      const won = owned.filter((l) => l.stage === 'approved' || QUALIFIED_PLUS.includes(l.stage)).length
+      return { agent: a, total: owned.length, won }
+    }).sort((a, b) => b.won - a.won)
+  }, [users, leads, roleFilter, team])
+
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-xl font-semibold text-[#111827]">{team === 'telesales' ? 'Telesales' : 'Direct Sales'} Analytics</h1>
-
-      <div className="grid grid-cols-4 gap-4">
-        {[['Total Leads', kpis.total, '#5757e6'], ['Qualified', kpis.qualified, '#14B8A6'], ['Approved', kpis.approved, '#22C55E'], ['Qual. Rate', `${kpis.qualRate}%`, '#F59E0B']].map(([label, val, color]) => (
-          <div key={label as string} className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-4">
-            <p className="text-xs text-[#6B7280] mb-1">{label as string}</p>
-            <p className="text-2xl font-bold" style={{ color: color as string }}>{val as string | number}</p>
+    <div className="p-4 sm:p-6 space-y-6">
+      <PageHeader
+        crumbs={[{ label: 'CRM', href: '/crm' }]}
+        title={`${team === 'telesales' ? 'Telesales' : 'Direct Sales'} Analytics`}
+        action={
+          <div className="flex items-center gap-2 flex-wrap">
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
+              className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+            <span className="text-xs text-[#6B7280]">to</span>
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
+              className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+            {(from || to) && <button onClick={() => { setFrom(''); setTo('') }} className="text-xs text-[#5757e6] hover:text-[#4444cc]">Reset</button>}
           </div>
-        ))}
-      </div>
+        }
+      />
 
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-[#111827] mb-4">Conversion Funnel</h3>
-          <div className="space-y-2">
-            {funnel.map((f) => (
-              <div key={f.label} className="flex items-center gap-3">
-                <span className="text-xs text-[#4B5563] w-40">{f.label}</span>
-                <div className="flex-1 bg-[#f3f4f6] rounded-full h-5 overflow-hidden">
-                  <div className="h-5 rounded-full bg-[#5757e6] flex items-center justify-end px-2" style={{ width: `${(f.value / max) * 100}%` }}>
-                    <span className="text-[10px] text-[#111827] font-semibold">{f.value}</span>
-                  </div>
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><CardSkeleton /><CardSkeleton /></div>
+      ) : (
+        <>
+          {/* Headline metric + secondary KPIs */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="sm:col-span-1 bg-[#5757e6] rounded-xl p-5 flex flex-col justify-center">
+              <p className="text-xs text-white/80 mb-1">Conversion Rate</p>
+              <p className="text-4xl font-bold text-white">{kpis.conversion}%</p>
+              <p className="text-[11px] text-white/70 mt-1">of all captured leads → approved</p>
+            </div>
+            <div className="sm:col-span-3 grid grid-cols-3 gap-4">
+              {[['Total Leads', kpis.total, '#111827'], ['Qualified', kpis.qualified, '#14B8A6'], ['Approved', kpis.approved, '#22C55E']].map(([label, val, color]) => (
+                <div key={label as string} className="bg-white border border-[#e5e7eb] rounded-xl p-4 flex flex-col justify-center">
+                  <p className="text-xs text-[#6B7280] mb-1">{label as string}</p>
+                  <p className="text-2xl font-bold" style={{ color: color as string }}>{val as number}</p>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-[#111827] mb-4">Status Distribution</h3>
-          <div className="flex flex-wrap gap-2">
-            {statuses.map((s) => (
-              <div key={s.id} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: `${s.color}12` }}>
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-xs text-[#374151]">{s.name}</span>
-                <span className="text-xs font-bold" style={{ color: s.color }}>{statusCounts[s.id] ?? 0}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white border border-[#e5e7eb] rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-[#111827] mb-4">Conversion Funnel</h3>
+              <Funnel steps={funnelSteps} />
+            </div>
+
+            <div className="bg-white border border-[#e5e7eb] rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-[#111827] mb-4">Status Distribution</h3>
+              <div className="flex flex-wrap gap-2">
+                {statuses.map((s) => (
+                  <div key={s.id} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: `${s.color}12` }}>
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
+                    <span className="text-xs text-[#374151]">{s.name}</span>
+                    <span className="text-xs font-bold" style={{ color: s.color }}>{statusCounts[s.id] ?? 0}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
-        </div>
-      </div>
+
+          {/* Agent leaderboard */}
+          <div className="bg-white border border-[#e5e7eb] rounded-xl overflow-hidden">
+            <h3 className="text-sm font-semibold text-[#111827] px-5 pt-5 pb-3">Agent Leaderboard</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#e5e7eb] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
+                    <th className="px-5 py-2">Rank</th><th className="px-5 py-2">Agent</th><th className="px-5 py-2 text-right">Leads</th><th className="px-5 py-2 text-right">Won</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboard.length === 0 ? (
+                    <tr><td colSpan={4} className="px-5 py-8 text-center text-[#4B5563] text-sm">No agents on this team yet.</td></tr>
+                  ) : leaderboard.map((row, i) => (
+                    <tr key={row.agent.id} className="border-b border-[#e5e7eb] last:border-0 hover:bg-[#f3f4f6] transition-colors">
+                      <td className="px-5 py-2.5 text-[#4B5563]">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}</td>
+                      <td className="px-5 py-2.5 text-[#111827]">{row.agent.full_name}</td>
+                      <td className="px-5 py-2.5 text-right text-[#4B5563]">{row.total}</td>
+                      <td className="px-5 py-2.5 text-right font-semibold text-[#22C55E]">{row.won}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

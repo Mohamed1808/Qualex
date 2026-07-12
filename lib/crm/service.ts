@@ -466,3 +466,30 @@ export async function updateLead(leadId: string, patch: Partial<CrmLead>, actor?
   if (actor && detail) logHistory(s, leadId, actor, 'status_change', detail)
   write(s); return delay(undefined)
 }
+
+/**
+ * Merge a duplicate lead into the survivor: moves comments/history/call
+ * attempts over, then deletes the duplicate. Fields the survivor is missing
+ * (project, status, assignment) are backfilled from the duplicate.
+ */
+export async function mergeLeads(survivorId: string, duplicateId: string, actor: string): Promise<void> {
+  const s = read()
+  const survivor = s.leads.find((l) => l.id === survivorId)
+  const duplicate = s.leads.find((l) => l.id === duplicateId)
+  if (!survivor || !duplicate) return delay(undefined)
+
+  const backfill: Partial<CrmLead> = {}
+  if (!survivor.project_id && duplicate.project_id) backfill.project_id = duplicate.project_id
+  if (!survivor.status_id && duplicate.status_id) backfill.status_id = duplicate.status_id
+  if (!survivor.assigned_user_id && duplicate.assigned_user_id) backfill.assigned_user_id = duplicate.assigned_user_id
+  if (!survivor.facebook_url && duplicate.facebook_url) backfill.facebook_url = duplicate.facebook_url
+  patchLead(s, survivorId, backfill)
+
+  s.comments = s.comments.map((c) => (c.lead_id === duplicateId ? { ...c, lead_id: survivorId } : c))
+  s.history = s.history.map((h) => (h.lead_id === duplicateId ? { ...h, lead_id: survivorId } : h))
+  s.callAttempts = s.callAttempts.map((c) => (c.lead_id === duplicateId ? { ...c, lead_id: survivorId } : c))
+  s.leads = s.leads.filter((l) => l.id !== duplicateId)
+
+  logHistory(s, survivorId, actor, 'status_change', `Merged duplicate lead (${duplicate.name}, ${duplicate.phone}) into this record`)
+  write(s); return delay(undefined)
+}

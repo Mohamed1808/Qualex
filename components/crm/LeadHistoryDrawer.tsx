@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import type { CrmLead, LeadComment, LeadHistoryEntry } from '@/lib/crm/types'
 import { listComments, listHistory, addComment } from '@/lib/crm/service'
+import { Skeleton } from './ui/Skeleton'
 
 const TYPE_ICON: Record<LeadHistoryEntry['type'], string> = {
   created: '✨', status_change: '🏷️', assignment: '🎯', comment: '💬', contact: '📞',
@@ -21,11 +22,13 @@ export default function LeadHistoryDrawer({
   const [history, setHistory] = useState<LeadHistoryEntry[]>([])
   const [body, setBody] = useState('')
   const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   async function reload() {
     const [c, h] = await Promise.all([listComments(lead.id), listHistory(lead.id)])
     setComments(c)
     setHistory(h)
+    setLoading(false)
   }
   useEffect(() => { reload() /* eslint-disable-next-line */ }, [lead.id])
 
@@ -40,8 +43,8 @@ export default function LeadHistoryDrawer({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex justify-end z-50" onClick={onClose}>
-      <div className="bg-[#ffffff] border-l border-[#e5e7eb] w-full max-w-md h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/40 flex justify-end z-50 animate-fade-in" onClick={onClose}>
+      <div className="bg-white border-l border-[#e5e7eb] w-full max-w-md h-full flex flex-col shadow-2xl animate-[slideIn_0.2s_ease-out]" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="px-5 py-4 border-b border-[#e5e7eb] flex items-start justify-between">
           <div>
@@ -65,7 +68,12 @@ export default function LeadHistoryDrawer({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto scrollbar-thin p-5">
-          {tab === 'timeline' ? (
+          {loading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-3/4" /><Skeleton className="h-3 w-1/2" />
+              <Skeleton className="h-4 w-2/3 mt-4" /><Skeleton className="h-3 w-1/3" />
+            </div>
+          ) : tab === 'timeline' ? (
             history.length === 0 ? (
               <p className="text-xs text-[#4B5563]">No history yet.</p>
             ) : (

@@ -9,16 +9,23 @@ import {
   updateLeadStatus, assignLead,
 } from '@/lib/crm/service'
 import LeadHistoryDrawer from './LeadHistoryDrawer'
+import PageHeader from './ui/PageHeader'
+import SlideOver from './ui/SlideOver'
+import { TableSkeleton } from './ui/Skeleton'
+import EmptyState from './ui/EmptyState'
+import { DensityToggle, useDensity } from './ui/useDensity'
 
 const ACTOR = { id: 'u-admin', name: 'Mohamed Moheb' }
 
 export default function LeadManagement() {
+  const { density, setDensity, rowPad } = useDensity()
   const [leads, setLeads] = useState<CrmLead[]>([])
   const [statuses, setStatuses] = useState<LeadStatus[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [users, setUsers] = useState<CrmUser[]>([])
   const [filter, setFilter] = useState<LeadFilter>({})
   const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
   const [historyFor, setHistoryFor] = useState<CrmLead | null>(null)
 
@@ -27,12 +34,14 @@ export default function LeadManagement() {
       listLeads({ ...filter, search: search || undefined }), listStatuses(), listProjects(), listUsers(),
     ])
     setLeads(l); setStatuses(s); setProjects(p); setUsers(u)
+    setLoading(false)
   }
   useEffect(() => { reload() /* eslint-disable-next-line */ }, [filter, search])
 
   const statusById = useMemo(() => Object.fromEntries(statuses.map((s) => [s.id, s])), [statuses])
   const projectById = useMemo(() => Object.fromEntries(projects.map((p) => [p.id, p])), [projects])
   const agents = users.filter((u) => u.role.includes('agent'))
+  const hasFilters = Boolean(filter.status_id || filter.project_id || filter.assigned_user_id || filter.from || filter.to || search)
 
   function exportCsv() {
     const rows = leads.map((l) => ({
@@ -51,20 +60,21 @@ export default function LeadManagement() {
   }
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-[#111827]">Lead Management</h1>
-          <p className="text-sm text-[#6B7280] mt-0.5">{leads.length} leads</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={exportCsv} className="border border-[#e5e7eb] text-[#4B5563] hover:text-[#111827] text-sm rounded-lg px-4 py-2">⬇ Export CSV</button>
-          <button onClick={() => setAdding(true)} className="bg-[#5757e6] hover:bg-[#4444cc] text-white text-sm font-medium rounded-lg px-4 py-2">+ Add Leads</button>
-        </div>
-      </div>
+    <div className="p-4 sm:p-6 space-y-4">
+      <PageHeader
+        crumbs={[{ label: 'CRM', href: '/crm' }]}
+        title="Lead Management"
+        subtitle={`${leads.length} leads`}
+        action={
+          <div className="flex gap-2">
+            <button onClick={exportCsv} className="border border-[#e5e7eb] text-[#4B5563] hover:text-[#111827] hover:bg-[#f3f4f6] text-sm rounded-lg px-4 py-2 transition-colors">⬇ Export CSV</button>
+            <button onClick={() => setAdding(true)} className="bg-[#5757e6] hover:bg-[#4444cc] text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors">+ Add Leads</button>
+          </div>
+        }
+      />
 
       {/* Filters */}
-      <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-4 grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="bg-white border border-[#e5e7eb] rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
         <input type="date" value={filter.from?.slice(0, 10) ?? ''} onChange={(e) => setFilter((f) => ({ ...f, from: e.target.value ? new Date(e.target.value).toISOString() : undefined }))} className={sel} />
         <input type="date" value={filter.to?.slice(0, 10) ?? ''} onChange={(e) => setFilter((f) => ({ ...f, to: e.target.value ? new Date(e.target.value + 'T23:59:59').toISOString() : undefined }))} className={sel} />
         <select value={filter.status_id ?? ''} onChange={(e) => setFilter((f) => ({ ...f, status_id: e.target.value || undefined }))} className={sel}>
@@ -76,43 +86,56 @@ export default function LeadManagement() {
         <select value={filter.assigned_user_id ?? ''} onChange={(e) => setFilter((f) => ({ ...f, assigned_user_id: e.target.value || undefined }))} className={sel}>
           <option value="">All agents</option>{agents.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
         </select>
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or phone…" className={`${sel} col-span-2 md:col-span-4`} />
-        <button onClick={() => { setFilter({}); setSearch('') }} className="text-xs text-[#5757e6] hover:text-[#4444cc]">Reset</button>
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or phone…" className={`${sel} sm:col-span-2 md:col-span-4`} />
+        {hasFilters && (
+          <button onClick={() => { setFilter({}); setSearch('') }} className="text-xs text-[#5757e6] hover:text-[#4444cc] self-center">Reset</button>
+        )}
       </div>
 
       {/* Table */}
-      <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl overflow-hidden">
+      <div className="bg-white border border-[#e5e7eb] rounded-xl overflow-hidden">
+        <div className="flex justify-end px-4 pt-3">
+          <DensityToggle density={density} onChange={setDensity} />
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
+            <thead className="sticky top-0 bg-white z-[1]">
               <tr className="border-b border-[#e5e7eb] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
                 <th className="px-4 py-3">Date</th><th className="px-4 py-3">Name</th><th className="px-4 py-3">Phone</th>
                 <th className="px-4 py-3">Project</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Assigned</th><th className="px-4 py-3">History</th>
               </tr>
             </thead>
             <tbody>
-              {leads.map((l) => {
+              {loading ? (
+                <TableSkeleton rows={6} cols={7} />
+              ) : leads.length === 0 ? (
+                <tr><td colSpan={7}>
+                  <EmptyState icon="❄️" title="No leads found"
+                    hint={hasFilters ? 'Try adjusting or resetting your filters.' : 'Add leads manually or import a CSV to get started.'}
+                    action={hasFilters ? { label: 'Reset filters', onClick: () => { setFilter({}); setSearch('') } } : { label: '+ Add Leads', onClick: () => setAdding(true) }} />
+                </td></tr>
+              ) : leads.map((l) => {
                 const status = l.status_id ? statusById[l.status_id] : undefined
                 return (
                   <tr key={l.id} className="border-b border-[#e5e7eb] last:border-0 hover:bg-[#f3f4f6] transition-colors">
-                    <td className="px-4 py-3 text-[#4B5563] text-xs whitespace-nowrap">{new Date(l.created_at).toLocaleDateString('en-CA')}</td>
-                    <td className="px-4 py-3 text-[#111827]">{l.name}</td>
-                    <td className="px-4 py-3 text-[#4B5563] font-mono text-xs">{l.phone}</td>
-                    <td className="px-4 py-3 text-xs text-[#4B5563]">{projectById[l.project_id ?? '']?.name ?? '—'}</td>
-                    <td className="px-4 py-3">
+                    <td className={`px-4 ${rowPad} text-[#4B5563] text-xs whitespace-nowrap`}>{new Date(l.created_at).toLocaleDateString('en-CA')}</td>
+                    <td className={`px-4 ${rowPad} text-[#111827]`}>{l.name}</td>
+                    <td className={`px-4 ${rowPad} text-[#4B5563] font-mono text-xs`}>{l.phone}</td>
+                    <td className={`px-4 ${rowPad} text-xs text-[#4B5563]`}>{projectById[l.project_id ?? '']?.name ?? '—'}</td>
+                    <td className={`px-4 ${rowPad}`}>
                       <select value={l.status_id ?? ''} onChange={async (e) => { await updateLeadStatus(l.id, e.target.value, ACTOR.name); reload() }}
                         className="bg-[#f3f4f6] border border-[#e5e7eb] rounded-lg px-2 py-1 text-xs focus:outline-none" style={{ color: status?.color ?? '#4B5563' }}>
-                        {statuses.map((s) => <option key={s.id} value={s.id} style={{ color: '#fff', backgroundColor: '#f3f4f6' }}>{s.name}</option>)}
+                        {statuses.map((s) => <option key={s.id} value={s.id} style={{ color: '#111827', backgroundColor: '#fff' }}>{s.name}</option>)}
                       </select>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={`px-4 ${rowPad}`}>
                       <select value={l.assigned_user_id ?? ''} onChange={async (e) => { await assignLead(l.id, e.target.value || null, ACTOR.name); reload() }}
                         className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] rounded-lg px-2 py-1 text-xs focus:outline-none">
                         <option value="">Unassigned</option>
                         {agents.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
                       </select>
                     </td>
-                    <td className="px-4 py-3"><button onClick={() => setHistoryFor(l)} className="text-xs text-[#5757e6] hover:underline">View</button></td>
+                    <td className={`px-4 ${rowPad}`}><button onClick={() => setHistoryFor(l)} className="text-xs text-[#5757e6] hover:underline">View</button></td>
                   </tr>
                 )
               })}
@@ -134,11 +157,17 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
   const [facebook, setFacebook] = useState('')
   const [projectId, setProjectId] = useState(projects[0]?.id ?? '')
   const [saving, setSaving] = useState(false)
+  const [touched, setTouched] = useState(false)
+  const [importCount, setImportCount] = useState<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const defaultStatus = statuses.find((s) => s.is_default)?.id ?? statuses[0]?.id ?? null
 
+  const nameError = touched && !name.trim() ? 'Name is required' : null
+  const phoneError = touched && !phone.trim() ? 'Phone is required' : touched && phone.trim() && !/^\d{8,}$/.test(phone.replace(/\D/g, '')) ? 'Enter a valid phone number' : null
+
   async function saveManual() {
-    if (!name.trim() || !phone.trim()) { toast.error('Name and phone required'); return }
+    setTouched(true)
+    if (!name.trim() || !phone.trim() || phoneError) { toast.error('Fix the highlighted fields'); return }
     setSaving(true)
     await createLead({ name: name.trim(), phone: phone.trim(), facebook_url: facebook.trim() || null, channel: 'call_center', project_id: projectId || null, status_id: defaultStatus, assigned_user_id: null, expire_note: null })
     setSaving(false)
@@ -162,51 +191,60 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
           .filter((r) => r.name && r.phone)
         if (rows.length === 0) { toast.error('No valid rows (need name + phone columns)'); return }
         const n = await importLeads(rows)
+        setImportCount(n)
         toast.success(`Imported ${n} leads`)
-        onDone()
+        setTimeout(onDone, 400)
       },
       error: () => toast.error('Failed to parse CSV'),
     })
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl w-full max-w-lg p-5" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-[#111827]">Add Leads</h3>
-          <button onClick={onClose} className="text-[#6B7280] hover:text-[#111827]">✕</button>
-        </div>
-        <div className="flex gap-1 mb-4 border-b border-[#e5e7eb]">
-          {(['manual', 'import'] as const).map((m) => (
-            <button key={m} onClick={() => setMode(m)} className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px capitalize ${mode === m ? 'text-[#5757e6] border-[#5757e6]' : 'text-[#6B7280] border-transparent'}`}>{m}</button>
-          ))}
-        </div>
-
-        <div className="mb-3">
-          <label className={lbl}>Project</label>
-          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={sel}>
-            <option value="">No project</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </div>
-
-        {mode === 'manual' ? (
-          <div className="space-y-3">
-            <div><label className={lbl}>Name</label><input value={name} onChange={(e) => setName(e.target.value)} className={sel} /></div>
-            <div><label className={lbl}>Phone</label><input value={phone} onChange={(e) => setPhone(e.target.value)} className={sel} placeholder="01xxxxxxxxx" /></div>
-            <div><label className={lbl}>Facebook URL (optional)</label><input value={facebook} onChange={(e) => setFacebook(e.target.value)} className={sel} /></div>
-            <button onClick={saveManual} disabled={saving} className="bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white text-sm font-medium rounded-lg px-5 py-2">{saving ? 'Saving…' : 'Add Lead'}</button>
-          </div>
-        ) : (
-          <div>
-            <p className="text-xs text-[#4B5563] mb-3">Upload a CSV with <span className="text-[#111827] font-mono">name, phone</span> columns (optional <span className="font-mono">facebook</span>). Leads go into the selected project.</p>
-            <input ref={fileRef} type="file" accept=".csv" onChange={onFile}
-              className="block w-full text-xs text-[#4B5563] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#5757e6] file:text-white file:text-sm file:cursor-pointer" />
-          </div>
-        )}
+    <SlideOver title="Add Leads" onClose={onClose}>
+      <div className="flex gap-1 mb-4 border-b border-[#e5e7eb]">
+        {(['manual', 'import'] as const).map((m) => (
+          <button key={m} onClick={() => setMode(m)} className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px capitalize transition-colors ${mode === m ? 'text-[#5757e6] border-[#5757e6]' : 'text-[#6B7280] border-transparent hover:text-[#111827]'}`}>{m}</button>
+        ))}
       </div>
-    </div>
+
+      <div className="mb-3">
+        <label className={lbl}>Project</label>
+        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={sel}>
+          <option value="">No project</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+      </div>
+
+      {mode === 'manual' ? (
+        <div className="space-y-3">
+          <div>
+            <label className={lbl}>Name</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => setTouched(true)} className={errCls(sel, !!nameError)} />
+            {nameError && <p className={errText}>{nameError}</p>}
+          </div>
+          <div>
+            <label className={lbl}>Phone</label>
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setTouched(true)} className={errCls(sel, !!phoneError)} placeholder="01xxxxxxxxx" />
+            {phoneError && <p className={errText}>{phoneError}</p>}
+          </div>
+          <div><label className={lbl}>Facebook URL (optional)</label><input value={facebook} onChange={(e) => setFacebook(e.target.value)} className={sel} /></div>
+          <button onClick={saveManual} disabled={saving} className="bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white text-sm font-medium rounded-lg px-5 py-2 transition-colors">{saving ? 'Saving…' : 'Add Lead'}</button>
+        </div>
+      ) : (
+        <div>
+          <p className="text-xs text-[#4B5563] mb-3">Upload a CSV with <span className="text-[#111827] font-mono">name, phone</span> columns (optional <span className="font-mono">facebook</span>). Leads go into the selected project.</p>
+          <input ref={fileRef} type="file" accept=".csv" onChange={onFile}
+            className="block w-full text-xs text-[#4B5563] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#5757e6] file:text-white file:text-sm file:cursor-pointer" />
+          {importCount !== null && <p className="text-xs text-[#22C55E] mt-3">✓ Imported {importCount} leads</p>}
+        </div>
+      )}
+    </SlideOver>
   )
+}
+
+function errCls(base: string, hasError: boolean) {
+  return hasError ? base.replace('border-[#e5e7eb]', 'border-[#F26161]').replace('focus:ring-[#5757e6]', 'focus:ring-[#F26161]') : base
 }
 
 const sel = 'w-full mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]'
 const lbl = 'text-[10px] text-[#6B7280] uppercase tracking-wide'
+const errText = 'text-[11px] text-[#F26161] mt-1'

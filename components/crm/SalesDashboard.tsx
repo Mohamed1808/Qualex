@@ -9,6 +9,11 @@ import {
 import LeadHistoryDrawer from './LeadHistoryDrawer'
 import LeadWorkDrawer from './LeadWorkDrawer'
 import { useSession } from '@/lib/crm/session'
+import PageHeader from './ui/PageHeader'
+import IconAction from './ui/IconAction'
+import { TableSkeleton } from './ui/Skeleton'
+import EmptyState from './ui/EmptyState'
+import { DensityToggle, useDensity } from './ui/useDensity'
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-CA') // YYYY-MM-DD
@@ -23,6 +28,7 @@ export default function SalesDashboard() {
   const CURRENT = { id: user.id, name: user.full_name, role: user.role }
   // Sales agents see only their own leads; managers see everything.
   const scope = isManager ? {} : { assigned_user_id: user.id }
+  const { density, setDensity, rowPad } = useDensity()
 
   const [leads, setLeads] = useState<CrmLead[]>([])
   const [statuses, setStatuses] = useState<LeadStatus[]>([])
@@ -69,6 +75,7 @@ export default function SalesDashboard() {
   }, [allLeads])
 
   const visible = leads.slice(0, pageSize)
+  const hasFilters = Boolean(filter.status_id || filter.project_id || filter.from || filter.to || search)
 
   async function changeStatus(lead: CrmLead, statusId: string) {
     await updateLeadStatus(lead.id, statusId, CURRENT.name)
@@ -78,17 +85,17 @@ export default function SalesDashboard() {
   }
 
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-xl font-semibold text-[#111827]">Sales Dashboard</h1>
+    <div className="p-4 sm:p-6 space-y-4">
+      <PageHeader crumbs={[{ label: 'CRM', href: '/crm' }]} title="Sales Dashboard" subtitle={`${leads.length} leads in view`} />
 
       {/* ---------- Statistics ---------- */}
-      <section className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl">
+      <section className="bg-white border border-[#e5e7eb] rounded-xl">
         <button
           onClick={() => setShowStats((v) => !v)}
           className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-[#111827]"
         >
           Statistics
-          <span className="text-[#6B7280]">{showStats ? '▲' : '▼'}</span>
+          <span className="text-[#6B7280] text-xs">{showStats ? '▲' : '▼'}</span>
         </button>
         {showStats && (
           <div className="px-5 pb-5 flex flex-wrap gap-2">
@@ -97,11 +104,11 @@ export default function SalesDashboard() {
                 key={s.id}
                 onClick={() => setFilter((f) => ({ ...f, status_id: f.status_id === s.id ? undefined : s.id }))}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs transition-colors ${
-                  filter.status_id === s.id ? 'border-white/40' : 'border-[#e5e7eb] hover:border-[#d1d5db]'
+                  filter.status_id === s.id ? 'border-[#5757e6] ring-1 ring-[#5757e6]' : 'border-[#e5e7eb] hover:border-[#d1d5db]'
                 }`}
                 style={{ backgroundColor: `${s.color}12` }}
               >
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
                 <span className="text-[#374151]">{s.name}</span>
                 <span className="font-bold" style={{ color: s.color }}>{statusCounts[s.id] ?? 0}</span>
               </button>
@@ -111,16 +118,19 @@ export default function SalesDashboard() {
       </section>
 
       {/* ---------- Filter ---------- */}
-      <section className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl">
+      <section className="bg-white border border-[#e5e7eb] rounded-xl">
         <button
           onClick={() => setShowFilter((v) => !v)}
           className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-[#111827]"
         >
-          Filter
-          <span className="text-[#6B7280]">{showFilter ? '▲' : '▼'}</span>
+          <span className="flex items-center gap-2">
+            Filter
+            {hasFilters && <span className="w-1.5 h-1.5 rounded-full bg-[#5757e6]" />}
+          </span>
+          <span className="text-[#6B7280] text-xs">{showFilter ? '▲' : '▼'}</span>
         </button>
         {showFilter && (
-          <div className="px-5 pb-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="px-5 pb-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
             <div>
               <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">From date</label>
               <input type="date" value={filter.from?.slice(0, 10) ?? ''}
@@ -151,16 +161,18 @@ export default function SalesDashboard() {
                 {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
-            <div className="col-span-2 md:col-span-4">
-              <button onClick={() => setFilter({})} className="text-xs text-[#5757e6] hover:text-[#4444cc]">Reset filters</button>
-            </div>
+            {hasFilters && (
+              <div className="col-span-1 sm:col-span-2 md:col-span-4">
+                <button onClick={() => setFilter({})} className="text-xs text-[#5757e6] hover:text-[#4444cc]">Reset filters</button>
+              </div>
+            )}
           </div>
         )}
       </section>
 
       {/* ---------- Datatable ---------- */}
-      <section className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
+      <section className="bg-white border border-[#e5e7eb] rounded-xl p-4 sm:p-5">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div className="flex items-center gap-2 text-sm text-[#4B5563]">
             Show
             <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}
@@ -169,13 +181,16 @@ export default function SalesDashboard() {
             </select>
             entries
           </div>
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…"
-            className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 w-56 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+          <div className="flex items-center gap-2 flex-1 sm:flex-none justify-end flex-wrap">
+            <DensityToggle density={density} onChange={setDensity} />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…"
+              className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 w-full sm:w-56 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+          </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
+            <thead className="sticky top-0 bg-white z-[1]">
               <tr className="border-b border-[#e5e7eb] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
                 <th className="px-3 py-3">Date</th>
                 <th className="px-3 py-3">Name</th>
@@ -189,53 +204,49 @@ export default function SalesDashboard() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="px-3 py-12 text-center text-[#4B5563]">Loading…</td></tr>
+                <TableSkeleton rows={6} cols={8} />
               ) : visible.length === 0 ? (
-                <tr><td colSpan={8} className="px-3 py-12 text-center text-[#4B5563]">No leads found</td></tr>
+                <tr><td colSpan={8}>
+                  <EmptyState icon="🗂️" title="No leads found" hint={hasFilters ? 'Try adjusting or resetting your filters.' : 'New leads assigned to you will show up here.'}
+                    action={hasFilters ? { label: 'Reset filters', onClick: () => { setFilter({}); setSearch('') } } : undefined} />
+                </td></tr>
               ) : visible.map((lead) => {
                 const status = lead.status_id ? statusById[lead.status_id] : undefined
                 const project = lead.project_id ? projectById[lead.project_id] : undefined
                 return (
                   <tr key={lead.id} className="border-b border-[#e5e7eb] last:border-0 hover:bg-[#f3f4f6] transition-colors">
-                    <td className="px-3 py-3 text-[#4B5563] text-xs whitespace-nowrap">{fmtDate(lead.created_at)}</td>
-                    <td className="px-3 py-3 text-[#5757e6] font-medium">{lead.name}</td>
-                    <td className="px-3 py-3 text-[#4B5563] font-mono text-xs">{lead.phone}</td>
-                    <td className="px-3 py-3">
+                    <td className={`px-3 ${rowPad} text-[#4B5563] text-xs whitespace-nowrap`}>{fmtDate(lead.created_at)}</td>
+                    <td className={`px-3 ${rowPad} text-[#5757e6] font-medium`}>{lead.name}</td>
+                    <td className={`px-3 ${rowPad} text-[#4B5563] font-mono text-xs`}>{lead.phone}</td>
+                    <td className={`px-3 ${rowPad}`}>
                       <div className="flex items-center gap-1.5">
-                        {/* Facebook */}
-                        <a
-                          href={lead.facebook_url ?? undefined}
-                          target="_blank" rel="noopener noreferrer"
-                          onClick={() => lead.facebook_url && logContact(lead.id, 'Facebook', CURRENT.name)}
-                          title={lead.facebook_url ? 'Open Facebook' : 'No Facebook link'}
-                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${lead.facebook_url ? 'bg-[#1877F2] text-white hover:opacity-80' : 'bg-[#e5e7eb] text-[#4B5563] pointer-events-none'}`}
-                        >f</a>
-                        {/* WhatsApp */}
-                        <a href={waLink(lead.phone)} target="_blank" rel="noopener noreferrer"
-                          onClick={() => logContact(lead.id, 'WhatsApp', CURRENT.name)}
-                          title="Contact on WhatsApp"
-                          className="w-7 h-7 rounded-full bg-[#25D366] text-white flex items-center justify-center text-xs hover:opacity-80">✆</a>
-                        {/* Call */}
-                        <a href={`tel:${lead.phone}`}
-                          onClick={() => logContact(lead.id, 'Call', CURRENT.name)}
-                          title="Call"
-                          className="w-7 h-7 rounded-full bg-[#5757e6] text-white flex items-center justify-center text-xs hover:opacity-80">☎</a>
-                        {/* Self reminder */}
-                        <button onClick={() => setReminderFor(lead)} title="Schedule a reminder"
-                          className="w-7 h-7 rounded-full bg-[#F59E0B]/20 text-[#F59E0B] flex items-center justify-center text-xs hover:bg-[#F59E0B]/30">🔔</button>
-                        {/* Unified WhatsApp chat */}
+                        <IconAction label={lead.facebook_url ? 'Open Facebook' : 'No Facebook link'} href={lead.facebook_url ?? undefined}
+                          target="_blank" rel="noopener noreferrer" bg={lead.facebook_url ? '#1877F2' : '#e5e7eb'} color={lead.facebook_url ? '#fff' : '#9CA3AF'}
+                          disabled={!lead.facebook_url}>
+                          f
+                        </IconAction>
+                        <IconAction label="Contact on WhatsApp" href={waLink(lead.phone)} target="_blank" rel="noopener noreferrer"
+                          onClick={() => logContact(lead.id, 'WhatsApp', CURRENT.name)} bg="#25D366">
+                          ✆
+                        </IconAction>
+                        <IconAction label="Call" href={`tel:${lead.phone}`} onClick={() => logContact(lead.id, 'Call', CURRENT.name)} bg="#5757e6">
+                          ☎
+                        </IconAction>
+                        <IconAction label="Schedule a reminder" onClick={() => setReminderFor(lead)} bg="#F59E0B33" color="#B45309">
+                          🔔
+                        </IconAction>
                         <a href={`/crm/whatsapp?lead=${lead.id}`} title="Company WhatsApp chat"
-                          className="ml-1 flex items-center gap-1 px-2.5 h-7 rounded-lg bg-[#7C3AED] text-white text-xs font-medium hover:bg-[#6D28D9]">
+                          className="ml-1 flex items-center gap-1 px-2.5 h-9 rounded-lg bg-[#7C3AED] text-white text-xs font-medium hover:bg-[#6D28D9] transition-colors">
                           💬 Chat
                         </a>
                       </div>
                     </td>
-                    <td className="px-3 py-3">
+                    <td className={`px-3 ${rowPad}`}>
                       {project ? (
                         <span className="text-xs px-2 py-1 rounded bg-[#5757e6]/15 text-[#4444cc]">{project.name}</span>
                       ) : <span className="text-[#4B5563] text-xs">—</span>}
                     </td>
-                    <td className="px-3 py-3">
+                    <td className={`px-3 ${rowPad}`}>
                       <select
                         value={lead.status_id ?? ''}
                         onChange={(e) => changeStatus(lead, e.target.value)}
@@ -243,14 +254,14 @@ export default function SalesDashboard() {
                         style={{ color: status?.color ?? '#4B5563' }}
                       >
                         {statuses.map((s) => (
-                          <option key={s.id} value={s.id} style={{ color: '#fff', backgroundColor: '#f3f4f6' }}>{s.name}</option>
+                          <option key={s.id} value={s.id} style={{ color: '#111827', backgroundColor: '#fff' }}>{s.name}</option>
                         ))}
                       </select>
                     </td>
-                    <td className="px-3 py-3 text-xs text-[#4B5563]">{lead.expire_note ?? '—'}</td>
-                    <td className="px-3 py-3 whitespace-nowrap">
+                    <td className={`px-3 ${rowPad} text-xs text-[#4B5563]`}>{lead.expire_note ?? '—'}</td>
+                    <td className={`px-3 ${rowPad} whitespace-nowrap`}>
                       <button onClick={() => setWorkFor(lead)}
-                        className="text-xs font-medium text-white bg-[#5757e6] hover:bg-[#4444cc] rounded px-2.5 py-1 mr-2">Work</button>
+                        className="text-xs font-medium text-white bg-[#5757e6] hover:bg-[#4444cc] rounded px-2.5 py-1 mr-2 transition-colors">Work</button>
                       <button onClick={() => setHistoryFor(lead)}
                         className="text-xs text-[#5757e6] hover:underline">History</button>
                     </td>
@@ -260,7 +271,9 @@ export default function SalesDashboard() {
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-[#6B7280] mt-3">Showing {visible.length} of {leads.length} entries</p>
+        {!loading && visible.length > 0 && (
+          <p className="text-xs text-[#6B7280] mt-3">Showing {visible.length} of {leads.length} entries</p>
+        )}
       </section>
 
       {reminderFor && (
@@ -282,7 +295,10 @@ function ReminderModal({ lead, current, onClose }: { lead: CrmLead; current: { i
   const [at, setAt] = useState('')
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
+  const [touched, setTouched] = useState(false)
+  const invalid = touched && !at
   async function save() {
+    setTouched(true)
     if (!at) { toast.error('Pick a date & time'); return }
     setSaving(true)
     await scheduleReminder(current.id, lead.id, new Date(at).toISOString(), note)
@@ -291,18 +307,19 @@ function ReminderModal({ lead, current, onClose }: { lead: CrmLead; current: { i
     onClose()
   }
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-[#ffffff] border border-[#e5e7eb] rounded-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
+      <div className="bg-white border border-[#e5e7eb] rounded-xl p-6 w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-sm font-semibold text-[#111827] mb-1">Schedule reminder</h3>
         <p className="text-xs text-[#6B7280] mb-4">Follow-up on {lead.name} · {lead.phone}</p>
         <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">When</label>
-        <input type="datetime-local" value={at} onChange={(e) => setAt(e.target.value)}
-          className="w-full mt-1 mb-3 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
+        <input type="datetime-local" value={at} onChange={(e) => setAt(e.target.value)} onBlur={() => setTouched(true)}
+          className={`w-full mt-1 mb-1 bg-[#f3f4f6] border text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 ${invalid ? 'border-[#F26161] focus:ring-[#F26161]' : 'border-[#e5e7eb] focus:ring-[#5757e6]'}`} />
+        {invalid && <p className="text-[11px] text-[#F26161] mb-2">Pick a date and time to continue.</p>}
         <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">Note</label>
         <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="e.g. Call back about villa pricing"
           className="w-full mt-1 mb-4 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
         <div className="flex gap-2">
-          <button onClick={save} disabled={saving} className="flex-1 bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white text-sm font-medium rounded-lg py-2">
+          <button onClick={save} disabled={saving} className="flex-1 bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white text-sm font-medium rounded-lg py-2 transition-colors">
             {saving ? 'Saving…' : 'Schedule'}
           </button>
           <button onClick={onClose} className="px-4 text-sm text-[#6B7280] hover:text-[#111827] border border-[#e5e7eb] rounded-lg">Cancel</button>
