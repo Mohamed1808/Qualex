@@ -189,6 +189,20 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
     onDone()
   }
 
+  function downloadTemplate() {
+    const csv = Papa.unparse({
+      fields: ['name', 'phone', 'source', 'campaign', 'national_id'],
+      data: [
+        ['Ahmed Mostafa', '01012345678', 'call_center', 'Summer 2025', '29001011234567'],
+        ['Mona Ibrahim', '01198765432', 'facebook', 'Ramadan Offer', ''],
+      ],
+    })
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+    const a = document.createElement('a')
+    a.href = url; a.download = 'lead-import-template.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -258,7 +272,14 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
         </div>
       ) : (
         <div>
-          <p className="text-xs text-[#4B5563] mb-3">Upload a CSV with <span className="text-[#111827] font-mono">name, phone</span> columns (optional <span className="font-mono">source, campaign, national_id</span>). Rows use the source above unless a <span className="font-mono">source</span> column is present.</p>
+          <p className="text-xs text-[#4B5563] mb-1">Upload a CSV with <span className="text-[#111827] font-mono">name, phone</span> columns (optional <span className="font-mono">source, campaign, national_id</span>). Rows use the source above unless a <span className="font-mono">source</span> column is present.</p>
+          <p className="text-[11px] text-[#6B7280] mb-3">Valid <span className="font-mono">source</span> values: <span className="font-mono">{CHANNELS.join(', ')}</span></p>
+
+          <button onClick={downloadTemplate} type="button"
+            className="w-full mb-3 flex items-center justify-center gap-2 border border-[#5757e6]/30 bg-[#5757e6]/5 hover:bg-[#5757e6]/10 text-[#5757e6] text-sm font-medium rounded-lg px-4 py-2.5 transition-colors">
+            ⬇ Download Template
+          </button>
+
           <input ref={fileRef} type="file" accept=".csv" onChange={onFile}
             className="block w-full text-xs text-[#4B5563] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#5757e6] file:text-white file:text-sm file:cursor-pointer" />
           {importCount !== null && <p className="text-xs text-[#22C55E] mt-3">✓ Imported {importCount} leads</p>}
