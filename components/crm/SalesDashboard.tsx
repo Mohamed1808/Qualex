@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import type { CrmLead, LeadStatus, Project, LeadFilter, LeadChannel } from '@/lib/crm/types'
 import {
@@ -22,6 +23,8 @@ function fmtDate(iso: string) {
 
 export default function SalesDashboard() {
   const { user, isManager } = useSession()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const CURRENT = { id: user.id, name: user.full_name, role: user.role }
   // Sales agents see only their own leads; managers see everything.
   const scope = isManager ? {} : { assigned_user_id: user.id }
@@ -58,6 +61,16 @@ export default function SalesDashboard() {
     reload()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, search, user.id])
+
+  // Deep-link from a notification: ?lead=<id> auto-opens the work drawer, then clears the param.
+  useEffect(() => {
+    const leadId = searchParams.get('lead')
+    if (!leadId || leads.length === 0) return
+    const match = leads.find((l) => l.id === leadId)
+    if (match) setWorkFor(match)
+    router.replace('/crm/sales')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, leads])
 
   const statusById = useMemo(() => Object.fromEntries(statuses.map((s) => [s.id, s])), [statuses])
   const projectById = useMemo(() => Object.fromEntries(projects.map((p) => [p.id, p])), [projects])

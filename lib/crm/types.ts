@@ -158,6 +158,7 @@ export interface CrmLead {
   // auto-callback scheduling (system-driven after no-answers)
   next_callback_at: string | null
   callback_locked: boolean
+  callback_notified: boolean
 
   // duplicate detection
   is_duplicate: boolean
@@ -275,6 +276,37 @@ export interface ActivityLogEntry {
   lead_id: string | null
   lead_name: string | null
   at: string
+}
+
+// ============================================================================
+// Notifications — user-facing, cross-role. Fired whenever an action by one
+// user concerns another (lead assigned/reassigned to you, a lead you own
+// changed stage, a callback/reminder came due, etc). Visible to every role,
+// unlike the hidden Activity Log above.
+// ============================================================================
+export type NotificationType =
+  | 'lead_assigned'
+  | 'lead_reassigned'
+  | 'callback_due'
+  | 'reminder_due'
+  | 'new_unassigned_lead'
+  | 'lead_auto_terminated'
+  | 'qualified_to_ds'
+  | 'credit_submitted'
+  | 'credit_decision'
+  | 'duplicate_detected'
+
+export interface AppNotification {
+  id: string
+  user_id: string
+  type: NotificationType
+  title: string
+  message: string
+  lead_id: string | null
+  lead_name: string | null
+  link: string | null
+  is_read: boolean
+  created_at: string
 }
 
 export interface ActivityFilter {

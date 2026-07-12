@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import BrandLogo from '@/components/shared/BrandLogo'
 import { useSession } from '@/lib/crm/session'
 import AttendanceControls from './AttendanceControls'
+import NotificationBell from './NotificationBell'
 
 type Audience = 'agent' | 'ts_sup' | 'ds_sup' | 'admin'
 type NavItem = { href: string; label: string; icon: string; audiences: Audience[] }
@@ -168,6 +169,7 @@ export default function CrmShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             {isAgent && <AttendanceControls userId={user.id} />}
+            <NotificationBell userId={user.id} />
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-[#5757e6]/20 flex items-center justify-center text-[#5757e6] text-xs font-bold flex-shrink-0">
                 {user.full_name.charAt(0)}

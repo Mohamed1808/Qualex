@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import type { CrmLead, CrmUser, LeadStage, LeadChannel } from '@/lib/crm/types'
 import {
@@ -25,6 +26,8 @@ const STAGES: Record<'telesales' | 'direct_sales', LeadStage[]> = {
 
 export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_sales' }) {
   const { user } = useSession()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const CURRENT = { id: user.id, name: user.full_name, role: user.role }
   const { density, setDensity, rowPad } = useDensity()
   const [leads, setLeads] = useState<CrmLead[]>([])
@@ -48,6 +51,16 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
     setSelected(new Set())
   }
   useEffect(() => { setLoading(true); reload() /* eslint-disable-next-line */ }, [team])
+
+  // Deep-link from a notification: ?lead=<id> auto-opens the work drawer, then clears the param.
+  useEffect(() => {
+    const leadId = searchParams.get('lead')
+    if (!leadId || leads.length === 0) return
+    const match = leads.find((l) => l.id === leadId)
+    if (match) setWorkFor(match)
+    router.replace(team === 'telesales' ? '/crm/telesales/queue' : '/crm/direct-sales/queue')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, leads])
 
   const agents = users.filter((u) => u.role === (team === 'telesales' ? 'telesales_agent' : 'direct_sales_agent') && u.is_active)
   const projectName = (id: string | null) => projects.find((p) => p.id === id)?.name ?? '—'

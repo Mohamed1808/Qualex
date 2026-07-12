@@ -22,10 +22,13 @@ import type {
   LeadHistoryEntry, DistributionSchedule, LeadFilter, WhatsAppMessage,
   Attendance, CallAttempt, CallStage, CallOutcome, Disposition, LeadStage,
   ActivityLogEntry, ActivityCategory, ActivityFilter,
+  AppNotification, NotificationType, UserRole,
 } from './types'
 
-// v5: added the hidden agent activity log (SLA tracking) — bump to reseed.
-const KEY = 'qualex-crm-v5'
+// v6: added user-facing notifications — bump to reseed.
+const KEY = 'qualex-crm-v6'
+/** Same-tab live-update signal for the notification bell (cross-tab updates arrive via the native `storage` event). */
+export const NOTIFICATIONS_EVENT = 'qualex-notifications-updated'
 
 interface Store {
   statuses: LeadStatus[]
@@ -41,6 +44,7 @@ interface Store {
   attendance: Attendance[]
   callAttempts: CallAttempt[]
   activityLog: ActivityLogEntry[]
+  notifications: AppNotification[]
 }
 
 function seed(): Store {
@@ -61,6 +65,7 @@ function seed(): Store {
     })),
     whatsapp: [],
     activityLog: [],
+    notifications: [],
   }
 }
 
@@ -82,6 +87,8 @@ function read(): Store {
 function write(s: Store) {
   if (typeof window === 'undefined') return
   window.localStorage.setItem(KEY, JSON.stringify(s))
+  // Same-tab live-update signal (the native `storage` event only fires in OTHER tabs).
+  window.dispatchEvent(new Event(NOTIFICATIONS_EVENT))
 }
 
 /** Wipe the demo store back to seed (handy for demos). */
@@ -193,11 +200,30 @@ export async function listLeads(filter: LeadFilter = {}): Promise<CrmLead[]> {
   return delay(leads.sort((a, b) => b.created_at.localeCompare(a.created_at)))
 }
 
+function normalizePhone(p: string): string {
+  return p.replace(/\D/g, '').replace(/^0/, '20')
+}
+
+/** Checks for an existing lead with the same phone; flags + notifies if found. */
+function detectDuplicate(s: Store, lead: CrmLead) {
+  const norm = normalizePhone(lead.phone)
+  const existing = s.leads.find((l) => l.id !== lead.id && normalizePhone(l.phone) === norm)
+  if (!existing) return
+  lead.is_duplicate = true
+  lead.duplicate_of = existing.id
+  notifyRole(s, 'telesales_supervisor', 'duplicate_detected', 'Duplicate lead detected',
+    `${lead.name} (${lead.phone}) matches an existing lead.`, lead.id, lead.name, '/crm/duplicates')
+}
+
 export async function createLead(input: Partial<CrmLead> & { name: string; phone: string }): Promise<CrmLead> {
   const s = read()
   const lead = makeLead({ ...input, id: uid(), created_at: now(), updated_at: now() })
   s.leads.push(lead)
   s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: 'System', type: 'created', detail: 'Lead created' })
+  detectDuplicate(s, lead)
+  if (!lead.is_duplicate) {
+    notifyRole(s, 'telesales_supervisor', 'new_unassigned_lead', 'New lead', `${lead.name} needs to be assigned.`, lead.id, lead.name, '/crm/telesales/queue?lead=' + lead.id)
+  }
   write(s)
   return delay(lead)
 }
@@ -205,10 +231,17 @@ export async function createLead(input: Partial<CrmLead> & { name: string; phone
 /** Bulk import (from CSV/manual list). */
 export async function importLeads(rows: (Partial<CrmLead> & { name: string; phone: string })[]): Promise<number> {
   const s = read()
+  let duplicates = 0
   for (const row of rows) {
     const lead = makeLead({ ...row, id: uid(), created_at: now(), updated_at: now() })
     s.leads.push(lead)
     s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: 'Import', type: 'created', detail: 'Imported' })
+    detectDuplicate(s, lead)
+    if (lead.is_duplicate) duplicates++
+  }
+  const imported = rows.length - duplicates
+  if (imported > 0) {
+    notifyRole(s, 'telesales_supervisor', 'new_unassigned_lead', 'Leads imported', `${imported} new lead(s) imported and need to be assigned.`, null, null, '/crm/telesales/queue')
   }
   write(s)
   return delay(rows.length)
@@ -385,6 +418,85 @@ export async function listActivityLog(filter: ActivityFilter = {}): Promise<Acti
   return delay(rows.sort((a, b) => b.at.localeCompare(a.at)))
 }
 
+// ================================================================
+// NOTIFICATIONS — user-facing, cross-role (see types.ts for the full trigger
+// list). Every notify* call below pushes a row and write() broadcasts the
+// same-tab NOTIFICATIONS_EVENT; the NotificationBell component listens for
+// that plus the native cross-tab `storage` event.
+// ================================================================
+function notifyUser(
+  s: Store,
+  userId: string,
+  type: NotificationType,
+  title: string,
+  message: string,
+  leadId?: string | null,
+  leadName?: string | null,
+  link?: string | null,
+) {
+  s.notifications.push({
+    id: uid(), user_id: userId, type, title, message,
+    lead_id: leadId ?? null, lead_name: leadName ?? null, link: link ?? null,
+    is_read: false, created_at: now(),
+  })
+}
+/** Notify every active user holding a given role (e.g. all telesales supervisors). */
+function notifyRole(s: Store, role: UserRole, type: NotificationType, title: string, message: string, leadId?: string | null, leadName?: string | null, link?: string | null) {
+  for (const u of s.users.filter((x) => x.role === role && x.is_active)) {
+    notifyUser(s, u.id, type, title, message, leadId, leadName, link)
+  }
+}
+
+export async function listNotifications(userId: string): Promise<AppNotification[]> {
+  return delay(read().notifications.filter((n) => n.user_id === userId).sort((a, b) => b.created_at.localeCompare(a.created_at)))
+}
+export async function markNotificationRead(id: string): Promise<void> {
+  const s = read()
+  s.notifications = s.notifications.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+  write(s); return delay(undefined)
+}
+export async function markAllNotificationsRead(userId: string): Promise<void> {
+  const s = read()
+  s.notifications = s.notifications.map((n) => (n.user_id === userId ? { ...n, is_read: true } : n))
+  write(s); return delay(undefined)
+}
+
+/**
+ * Time-based notification sweep: fires callback-due and reminder-due
+ * notifications once their due time has passed. Call periodically (e.g. every
+ * 30s) from a top-level component — cheap no-op when nothing is due.
+ */
+export async function runNotificationSweep(): Promise<void> {
+  const s = read()
+  const nowIso = now()
+  let changed = false
+
+  for (const lead of s.leads) {
+    if (lead.next_callback_at && !lead.callback_notified && lead.next_callback_at <= nowIso) {
+      const agentId = lead.assigned_direct_sales_agent && DS_STAGES_FOR_SWEEP.includes(lead.stage)
+        ? lead.assigned_direct_sales_agent
+        : lead.assigned_telesales_agent
+      if (agentId) {
+        notifyUser(s, agentId, 'callback_due', 'Callback due', `${lead.name} is due for a callback now.`, lead.id, lead.name, '/crm/sales?lead=' + lead.id)
+      }
+      lead.callback_notified = true
+      changed = true
+    }
+  }
+
+  for (const r of s.reminders) {
+    if (!r.is_sent && r.remind_at <= nowIso) {
+      const lead = s.leads.find((l) => l.id === r.lead_id)
+      notifyUser(s, r.user_id, 'reminder_due', 'Reminder', lead ? `Follow up with ${lead.name}${r.note ? ` — ${r.note}` : ''}` : 'You have a scheduled reminder.', r.lead_id, lead?.name ?? null, '/crm/sales?lead=' + r.lead_id)
+      r.is_sent = true
+      changed = true
+    }
+  }
+
+  if (changed) write(s)
+}
+const DS_STAGES_FOR_SWEEP = ['ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted']
+
 /** Supervisor assigns a lead to a telesales agent. */
 export async function assignTelesales(leadId: string, agentId: string, actor: string): Promise<void> {
   const s = read()
@@ -394,6 +506,7 @@ export async function assignTelesales(leadId: string, agentId: string, actor: st
   const actorInfo = resolveUserByName(s, actor)
   const leadForLog = s.leads.find((l) => l.id === leadId)
   logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'assignment', action: `Assigned to telesales ${agent?.full_name ?? agentId}`, leadId, leadName: leadForLog?.name })
+  notifyUser(s, agentId, 'lead_assigned', 'New lead assigned', `${leadForLog?.name ?? 'A lead'} has been assigned to you.`, leadId, leadForLog?.name, '/crm/sales?lead=' + leadId)
   write(s); return delay(undefined)
 }
 
@@ -406,6 +519,7 @@ export async function assignDirectSales(leadId: string, agentId: string, actor: 
   const actorInfo = resolveUserByName(s, actor)
   const leadForLog = s.leads.find((l) => l.id === leadId)
   logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'assignment', action: `Assigned to direct sales ${agent?.full_name ?? agentId}`, leadId, leadName: leadForLog?.name })
+  notifyUser(s, agentId, 'lead_assigned', 'New lead assigned', `${leadForLog?.name ?? 'A lead'} has been assigned to you.`, leadId, leadForLog?.name, '/crm/sales?lead=' + leadId)
   write(s); return delay(undefined)
 }
 
@@ -426,6 +540,7 @@ export async function qualifyLead(leadId: string, qual: QualificationInput, acto
   logHistory(s, leadId, actor, 'status_change', 'Qualified by telesales → sent to Direct Sales')
   const actorInfo = resolveUserById(s, actorId)
   logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'qualify', action: 'Qualified lead — sent to Direct Sales', leadId, leadName: leadForLog?.name })
+  notifyRole(s, 'direct_sales_supervisor', 'qualified_to_ds', 'Lead qualified', `${leadForLog?.name ?? 'A lead'} was qualified by telesales and needs assignment.`, leadId, leadForLog?.name, '/crm/direct-sales/queue?lead=' + leadId)
   write(s); return delay(undefined)
 }
 
@@ -478,9 +593,11 @@ export async function logCallAttempt(
 
   // After 3 no-answers (each with its scheduled callback), a further no-answer terminates.
   if (streak >= 3) {
-    patchLead(s, leadId, { stage: 'terminated', callback_locked: true, next_callback_at: null })
+    patchLead(s, leadId, { stage: 'terminated', callback_locked: true, next_callback_at: null, callback_notified: false })
     logHistory(s, leadId, agentName, 'status_change', 'Auto-terminated after 3 no-answers and callbacks elapsed')
     logActivity(s, { userId: actorInfo.id, userName: agentName, role: actorInfo.role, category: 'call_attempt', action: 'Lead auto-terminated after 3 no-answers', leadId, leadName: leadForLog?.name })
+    const supervisorRole = stage === 'direct_sales' ? 'direct_sales_supervisor' : 'telesales_supervisor'
+    notifyRole(s, supervisorRole, 'lead_auto_terminated', 'Lead auto-terminated', `${leadForLog?.name ?? 'A lead'} was auto-terminated after 3 no-answers.`, leadId, leadForLog?.name, '/crm/leads')
     write(s)
     return delay({ ok: false, terminated: true, error: 'Lead auto-terminated after 3 no-answers.' })
   }
@@ -503,12 +620,15 @@ export async function logCallAttempt(
     autoCallbackAt = new Date(Date.now() + mins * 60_000).toISOString()
     patch.next_callback_at = autoCallbackAt
     patch.callback_locked = true
+    patch.callback_notified = false
   } else if (outcome === 'answered') {
     // engaged again — clear the auto-callback lock
     patch.next_callback_at = answeredCategory === 'specific_call_back_time' ? callbackAt : null
     patch.callback_locked = false
+    patch.callback_notified = false
   } else if (outcome === 'callback_scheduled') {
     patch.next_callback_at = callbackAt
+    patch.callback_notified = false
   }
 
   patchLead(s, leadId, patch)
@@ -550,6 +670,7 @@ export async function reassignWithComment(
   // reopening a lead clears the auto-callback lock so the agent can work it
   patch.callback_locked = false
   patch.next_callback_at = null
+  patch.callback_notified = false
 
   patchLead(s, leadId, patch)
   if (comment.trim()) {
@@ -558,6 +679,7 @@ export async function reassignWithComment(
   logHistory(s, leadId, actor, 'assignment', `Reassigned to ${target.full_name}${comment.trim() ? ` — ${comment.trim()}` : ''}`)
   const actorInfo = resolveUserById(s, actorId)
   logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'reassignment', action: `Reassigned to ${target.full_name}${comment.trim() ? ` — ${comment.trim()}` : ''}`, leadId, leadName: lead.name })
+  notifyUser(s, toUserId, 'lead_reassigned', 'Lead reassigned to you', `${lead.name} was reassigned to you${comment.trim() ? `: "${comment.trim()}"` : '.'}`, leadId, lead.name, '/crm/sales?lead=' + leadId)
   write(s); return delay({ ok: true })
 }
 
@@ -597,6 +719,7 @@ export async function autoAssignBalanced(actor: string, leadIds?: string[]): Pro
 
   let assigned = 0
   let skipped = 0
+  const perAgentCount: Record<string, number> = {}
   for (const lead of pool) {
     const eligible = agents.filter((a) => load[a.id] < MAX_LEADS_PER_AGENT)
     if (eligible.length === 0) { skipped++; continue } // everyone checked-in is at/over the cap
@@ -607,12 +730,16 @@ export async function autoAssignBalanced(actor: string, leadIds?: string[]): Pro
     lead.tele_sla_due_at = slaDue(SLA_TELE_HOURS)
     lead.updated_at = now()
     load[pick.id]++
+    perAgentCount[pick.id] = (perAgentCount[pick.id] ?? 0) + 1
     s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: actor, type: 'assignment', detail: `Auto-assigned (random, checked-in, <${MAX_LEADS_PER_AGENT} leads) to ${pick.full_name}` })
     assigned++
   }
   if (assigned > 0) {
     const actorInfo = resolveUserByName(s, actor)
     logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'assignment', action: `Auto-assigned ${assigned} lead(s) (random, checked-in agents under ${MAX_LEADS_PER_AGENT} leads)` })
+    for (const [agentId, count] of Object.entries(perAgentCount)) {
+      notifyUser(s, agentId, 'lead_assigned', 'New leads assigned', `${count} new lead(s) have been assigned to you.`, null, null, '/crm/sales')
+    }
   }
   write(s)
   return delay({ assigned, skipped, reason: skipped > 0 ? `${skipped} lead(s) left unassigned — all checked-in agents are at the ${MAX_LEADS_PER_AGENT}-lead cap.` : undefined })
@@ -638,6 +765,7 @@ export async function bulkAssign(leadIds: string[], toUserId: string, actor: str
   if (count > 0) {
     const actorInfo = resolveUserByName(s, actor)
     logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'assignment', action: `Bulk-assigned ${count} lead(s) to ${target.full_name}` })
+    notifyUser(s, toUserId, 'lead_assigned', 'Leads assigned', `${count} lead(s) have been assigned to you.`, null, null, '/crm/sales')
   }
   write(s); return delay(count)
 }
@@ -675,6 +803,9 @@ export async function recordCreditDecision(leadId: string, decision: 'approved' 
   logHistory(s, leadId, actor, 'status_change', `Credit ${decision}${note ? ` — ${note}` : ''}`)
   const actorInfo = resolveUserById(s, actorId)
   logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'credit_decision', action: `Credit ${decision}${note ? ` — ${note}` : ''}`, leadId, leadName: leadForLog?.name })
+  if (leadForLog?.assigned_direct_sales_agent) {
+    notifyUser(s, leadForLog.assigned_direct_sales_agent, 'credit_decision', `Credit ${decision}`, `${leadForLog.name} was ${decision}${note ? ` — ${note}` : ''}.`, leadId, leadForLog.name, '/crm/sales?lead=' + leadId)
+  }
   write(s); return delay(undefined)
 }
 
@@ -688,6 +819,10 @@ export async function updateLead(leadId: string, patch: Partial<CrmLead>, actor?
     const actorInfo = resolveUserById(s, actorId)
     const category: ActivityCategory = patch.stage === 'credit_submitted' ? 'credit_submit' : 'kyc_update'
     logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category, action: detail, leadId, leadName: leadForLog?.name })
+    if (patch.stage === 'credit_submitted') {
+      notifyRole(s, 'admin', 'credit_submitted', 'Credit decision needed', `${leadForLog?.name ?? 'A lead'} was submitted to Credit and is awaiting a decision.`, leadId, leadForLog?.name, '/crm/credit')
+      notifyRole(s, 'direct_sales_supervisor', 'credit_submitted', 'Submitted to Credit', `${leadForLog?.name ?? 'A lead'} was submitted to Credit by your team.`, leadId, leadForLog?.name, '/crm/credit')
+    }
   }
   write(s); return delay(undefined)
 }

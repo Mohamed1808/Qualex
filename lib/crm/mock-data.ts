@@ -111,7 +111,7 @@ export function makeLead(partial: Partial<CrmLead> & { name: string; phone: stri
     knows_specific_car: null, occupation: null, customer_national_id: null,
     requested_car_brand: null, requested_car_model: null, requested_car_year: null,
     expected_program: null, id_document_url: null, unqualification_reason: null,
-    next_callback_at: null, callback_locked: false,
+    next_callback_at: null, callback_locked: false, callback_notified: false,
     is_duplicate: false, duplicate_of: null,
     created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     ...partial,
