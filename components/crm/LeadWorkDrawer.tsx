@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { CrmLead, CallAttempt, CallStage, Disposition, AnsweredCategory, Project } from '@/lib/crm/types'
 import {
@@ -181,10 +181,20 @@ function DirectSalesKyc({ lead, channelLabel, projectName, currentUser, onChange
   const [year, setYear] = useState<string>(lead.requested_car_year ? String(lead.requested_car_year) : '')
   const [source, setSource] = useState(lead.car_source ?? 'dealer')
   const [program, setProgram] = useState(lead.expected_program ?? '')
-  const [docUrl, setDocUrl] = useState(lead.id_document_url ?? '')
+  // Holds the uploaded ID document's file name (id_document_url stores the reference).
+  const [docName, setDocName] = useState(lead.id_document_url ?? '')
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [savingKyc, setSavingKyc] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const canSubmit = DS_STAGES.includes(lead.stage)
+
+  function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    // Frontend mock: we only keep the file name as the stored reference. The backend
+    // team replaces this with a real upload (POST the File to storage, store the URL).
+    setDocName(file.name)
+  }
 
   async function saveKyc() {
     setSavingKyc(true)
@@ -195,7 +205,7 @@ function DirectSalesKyc({ lead, channelLabel, projectName, currentUser, onChange
       requested_car_year: year ? Number(year) : null,
       car_source: (source || 'dealer') as CrmLead['car_source'],
       expected_program: (program || null) as CrmLead['expected_program'],
-      id_document_url: docUrl.trim() || null,
+      id_document_url: docName.trim() || null,
     }, currentUser.name, 'Direct Sales KYC updated', currentUser.id)
     setSavingKyc(false)
     toast.success('KYC saved')
@@ -203,13 +213,13 @@ function DirectSalesKyc({ lead, channelLabel, projectName, currentUser, onChange
   }
 
   async function submitCredit() {
-    if (!docUrl.trim()) { toast.error('Upload / attach the ID document first'); return }
+    if (!docName.trim()) { toast.error('Upload the ID document first'); return }
     setSubmitting(true)
     await updateLead(lead.id, {
       down_payment_bracket: downPayment || null, requested_car_brand: brand.trim() || null,
       requested_car_model: model.trim() || null, requested_car_year: year ? Number(year) : null,
       car_source: (source || 'dealer') as CrmLead['car_source'], expected_program: (program || null) as CrmLead['expected_program'],
-      id_document_url: docUrl.trim(), stage: 'credit_submitted',
+      id_document_url: docName.trim(), stage: 'credit_submitted',
     }, currentUser.name, 'Documents collected → submitted to Credit', currentUser.id)
     setSubmitting(false)
     toast.success('Submitted to Credit')
@@ -263,8 +273,20 @@ function DirectSalesKyc({ lead, channelLabel, projectName, currentUser, onChange
       </Section>
 
       <Section title="ID Document">
-        <input value={docUrl} onChange={(e) => setDocUrl(e.target.value)} placeholder="ID document URL (upload link)" className={inp} />
-        <p className="text-[10px] text-[#6B7280] mt-1">File upload is stubbed for the frontend — paste a link. Backend wires real storage.</p>
+        <input ref={fileInputRef} type="file" accept="image/*,application/pdf" onChange={onPickFile} className="hidden" />
+        {docName ? (
+          <div className="flex items-center gap-2 bg-[#f3f4f6] border border-[#e5e7eb] rounded-lg px-3 py-2">
+            <span className="text-base flex-shrink-0">📄</span>
+            <span className="text-sm text-[#111827] truncate flex-1" title={docName}>{docName}</span>
+            <button onClick={() => fileInputRef.current?.click()} className="text-xs text-[#5757e6] hover:text-[#4444cc] flex-shrink-0">Replace</button>
+            <button onClick={() => setDocName('')} className="text-xs text-[#6B7280] hover:text-[#F26161] flex-shrink-0">Remove</button>
+          </div>
+        ) : (
+          <button onClick={() => fileInputRef.current?.click()} className="w-full border border-dashed border-[#d1d5db] text-[#4B5563] hover:text-[#111827] hover:border-[#5757e6] hover:bg-[#5757e6]/5 text-sm rounded-lg px-4 py-3 transition-colors">
+            ⬆ Upload ID document (image or PDF)
+          </button>
+        )}
+        <p className="text-[10px] text-[#6B7280] mt-1">Frontend demo stores only the file name. Backend wires real file storage.</p>
         {canSubmit && (
           <button onClick={submitCredit} disabled={submitting} className="mt-3 w-full bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white font-semibold text-sm rounded-lg py-2.5 transition-colors">
             {submitting ? 'Submitting…' : '🏦 Submit to Credit'}
