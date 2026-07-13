@@ -109,7 +109,7 @@ export default function SalesDashboard() {
         </button>
         {showStats && (
           <div className="px-5 pb-5 flex flex-wrap gap-2">
-            {statuses.map((s) => (
+            {statuses.filter((s) => s.is_active).map((s) => (
               <button
                 key={s.id}
                 onClick={() => setFilter((f) => ({ ...f, status_id: f.status_id === s.id ? undefined : s.id }))}
