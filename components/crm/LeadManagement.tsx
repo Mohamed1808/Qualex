@@ -52,6 +52,7 @@ export default function LeadManagement() {
 
   function exportCsv() {
     const rows = leads.map((l) => ({
+      'Entry ID': l.entry_id,
       'Entry Date': new Date(l.created_at).toLocaleDateString('en-CA'),
       'Entry Time': new Date(l.created_at).toLocaleString(),
       Name: l.name, Phone: l.phone,
@@ -121,7 +122,7 @@ export default function LeadManagement() {
         <select value={filter.campaign ?? ''} onChange={(e) => setFilter((f) => ({ ...f, campaign: e.target.value || undefined }))} className={sel}>
           <option value="">All campaigns</option>{campaigns.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or phone…" className={`${sel} sm:col-span-2 md:col-span-3`} />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search entry ID, name or phone…" className={`${sel} sm:col-span-2 md:col-span-3`} />
         {hasFilters && (
           <button onClick={() => { setFilter({}); setSearch('') }} className="text-xs text-[#5757e6] hover:text-[#4444cc] self-center">Reset</button>
         )}
@@ -136,15 +137,15 @@ export default function LeadManagement() {
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-white z-[1]">
               <tr className="border-b border-[#e5e7eb] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
-                <th className="px-4 py-3">Date</th><th className="px-4 py-3">Name</th><th className="px-4 py-3">Phone</th><th className="px-4 py-3">Source</th>
+                <th className="px-4 py-3">Entry ID</th><th className="px-4 py-3">Date</th><th className="px-4 py-3">Name</th><th className="px-4 py-3">Phone</th><th className="px-4 py-3">Source</th>
                 <th className="px-4 py-3">Project</th><th className="px-4 py-3">Campaign</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Assigned</th><th className="px-4 py-3">History</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <TableSkeleton rows={6} cols={7} />
+                <TableSkeleton rows={6} cols={10} />
               ) : leads.length === 0 ? (
-                <tr><td colSpan={9}>
+                <tr><td colSpan={10}>
                   <EmptyState icon="❄️" title="No leads found"
                     hint={hasFilters ? 'Try adjusting or resetting your filters.' : 'Add leads manually or import a CSV to get started.'}
                     action={hasFilters ? { label: 'Reset filters', onClick: () => { setFilter({}); setSearch('') } } : { label: '+ Add Leads', onClick: () => setAdding(true) }} />
@@ -153,6 +154,7 @@ export default function LeadManagement() {
                 const status = l.status_id ? statusById[l.status_id] : undefined
                 return (
                   <tr key={l.id} className="border-b border-[#e5e7eb] last:border-0 hover:bg-[#f3f4f6] transition-colors">
+                    <td className={`px-4 ${rowPad} text-[#6B7280] font-mono text-xs whitespace-nowrap`}>{l.entry_id}</td>
                     <td className={`px-4 ${rowPad} text-[#4B5563] text-xs whitespace-nowrap`}>{new Date(l.created_at).toLocaleDateString('en-CA')}</td>
                     <td className={`px-4 ${rowPad} text-[#111827]`}>{l.name}</td>
                     <td className={`px-4 ${rowPad} text-[#4B5563] font-mono text-xs`}>{l.phone}</td>

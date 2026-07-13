@@ -99,9 +99,15 @@ const DS_STAGES: LeadStage[] = ['ds_assigned', 'ds_in_progress', 'id_collected',
 const QUALIFIED_PLUS: LeadStage[] = ['qualified', ...DS_STAGES, 'approved', 'rejected']
 
 /** Build a fully-populated lead with pipeline defaults. */
+/** Format a sequential entry number as a padded, human-readable ID (DF-00001). */
+export function formatEntryId(n: number): string {
+  return `DF-${String(n).padStart(5, '0')}`
+}
+
 export function makeLead(partial: Partial<CrmLead> & { name: string; phone: string }): CrmLead {
   return {
     id: partial.id ?? Math.random().toString(36).slice(2, 10),
+    entry_id: partial.entry_id ?? '',
     facebook_url: null, channel: 'call_center', campaign: null, project_id: null, status_id: null,
     assigned_user_id: null, expire_note: null,
     stage: 'new', assigned_telesales_agent: null, assigned_direct_sales_agent: null,
@@ -128,6 +134,7 @@ export const SEED_LEADS: CrmLead[] = NAMES.map((name, i) => {
 
   return makeLead({
     id: `ld-${i + 1}`,
+    entry_id: formatEntryId(i + 1),
     name,
     phone: `0127${String(6660000 + i * 37).padStart(7, '0')}`,
     facebook_url: i % 3 === 0 ? `https://facebook.com/${name.split(' ')[0].toLowerCase()}` : null,

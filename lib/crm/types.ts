@@ -112,6 +112,7 @@ export type ExpectedProgram = 'D2' | 'D3' | 'U2' | 'U4' | 'LC1' | 'LC5'
 
 export interface CrmLead {
   id: string
+  entry_id: string // human-readable unique ID (e.g. DF-00001), searchable across the system
   name: string
   phone: string
   facebook_url: string | null

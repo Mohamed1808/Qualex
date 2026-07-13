@@ -19,9 +19,11 @@ import { DensityToggle, useDensity } from './ui/useDensity'
 import { CHANNELS, CHANNEL_LABELS, CHANNEL_COLORS } from '@/lib/crm/constants'
 import type { Project } from '@/lib/crm/types'
 
+// Each supervisor only sees the stages that belong to their own flow. "unqualified"
+// appears in both, because a lead unqualified by either side is relevant to both.
 const STAGES: Record<'telesales' | 'direct_sales', LeadStage[]> = {
-  telesales: ['new', 'telesales_assigned', 'telesales_in_progress'],
-  direct_sales: ['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted'],
+  telesales: ['new', 'telesales_assigned', 'telesales_in_progress', 'unqualified', 'unreachable', 'retired', 'terminated'],
+  direct_sales: ['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted', 'approved', 'rejected', 'unqualified'],
 }
 
 export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_sales' }) {
@@ -36,6 +38,7 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
   const [stageFilter, setStageFilter] = useState<LeadStage | ''>('')
   const [channelFilter, setChannelFilter] = useState<LeadChannel | ''>('')
   const [campaignFilter, setCampaignFilter] = useState('')
+  const [assignmentFilter, setAssignmentFilter] = useState<'' | 'unassigned' | 'assigned'>('')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -72,13 +75,15 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
     return c
   }, [leads])
 
+  const teamAgentId = (l: CrmLead) => team === 'telesales' ? l.assigned_telesales_agent : l.assigned_direct_sales_agent
   const filtered = leads.filter((l) =>
     (!stageFilter || l.stage === stageFilter) &&
     (!channelFilter || l.channel === channelFilter) &&
     (!campaignFilter || l.campaign === campaignFilter) &&
-    (!search || l.name.toLowerCase().includes(search.toLowerCase()) || l.phone.includes(search))
+    (!assignmentFilter || (assignmentFilter === 'unassigned' ? !teamAgentId(l) : !!teamAgentId(l))) &&
+    (!search || l.name.toLowerCase().includes(search.toLowerCase()) || l.phone.includes(search) || l.entry_id.toLowerCase().includes(search.toLowerCase()))
   )
-  const hasFilters = !!(stageFilter || channelFilter || campaignFilter || search)
+  const hasFilters = !!(stageFilter || channelFilter || campaignFilter || assignmentFilter || search)
 
   async function assign(lead: CrmLead, agentId: string) {
     if (!agentId) return
@@ -104,8 +109,9 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
   }
 
   async function runAutoAssign() {
-    const res = await autoAssignBalanced(CURRENT.name)
-    if (res.assigned === 0 && res.skipped === 0) toast.info('No unassigned "new" leads to distribute')
+    const res = await autoAssignBalanced(CURRENT.name, team)
+    const headLabel = team === 'telesales' ? 'new' : 'qualified'
+    if (res.assigned === 0 && res.skipped === 0) toast.info(`No unassigned "${headLabel}" leads to distribute`)
     else if (res.assigned === 0) toast.error(res.reason ?? 'Could not assign any leads')
     else toast.success(`Auto-assigned ${res.assigned} lead(s) across checked-in agents${res.skipped ? ` — ${res.reason}` : ''}`)
     reload()
@@ -120,12 +126,12 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
         crumbs={[{ label: 'CRM', href: '/crm' }]}
         title={`${label} Live Queue`}
         subtitle={`${filtered.length} of ${leads.length} leads`}
-        action={team === 'telesales' ? (
-          <button onClick={runAutoAssign} title="Randomly distributes new leads to checked-in agents holding fewer than 20 active leads"
+        action={
+          <button onClick={runAutoAssign} title={`Randomly distributes ${team === 'telesales' ? 'new' : 'qualified'} leads to checked-in agents holding fewer than 20 active leads`}
             className="bg-[#5757e6] hover:bg-[#4444cc] text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors">
-            ⚡ Auto-assign new leads
+            ⚡ Auto-assign {team === 'telesales' ? 'new' : 'qualified'} leads
           </button>
-        ) : undefined}
+        }
       />
 
       {/* stage counts */}
@@ -143,7 +149,7 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
 
       {/* filters */}
       <div className="flex items-center gap-2 flex-wrap">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or phone…"
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search entry ID, name or phone…"
           className="flex-1 min-w-[180px] bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
         <select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value as LeadChannel | '')} className={selCls}>
           <option value="">All channels</option>
@@ -153,7 +159,12 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
           <option value="">All campaigns</option>
           {campaigns.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        {hasFilters && <button onClick={() => { setStageFilter(''); setChannelFilter(''); setCampaignFilter(''); setSearch('') }} className="text-xs text-[#5757e6] hover:text-[#4444cc]">Reset</button>}
+        <select value={assignmentFilter} onChange={(e) => setAssignmentFilter(e.target.value as typeof assignmentFilter)} className={selCls}>
+          <option value="">All leads</option>
+          <option value="unassigned">Unassigned only</option>
+          <option value="assigned">Assigned only</option>
+        </select>
+        {hasFilters && <button onClick={() => { setStageFilter(''); setChannelFilter(''); setCampaignFilter(''); setAssignmentFilter(''); setSearch('') }} className="text-xs text-[#5757e6] hover:text-[#4444cc]">Reset</button>}
         <DensityToggle density={density} onChange={setDensity} />
       </div>
 
@@ -177,6 +188,7 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
             <thead className="sticky top-0 bg-white z-[1]">
               <tr className="border-b border-[#e5e7eb] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
                 <th className="px-3 py-3 w-8"><input type="checkbox" checked={allSelected} onChange={toggleSelectAll} className="accent-[#5757e6]" /></th>
+                <th className="px-4 py-3">Entry ID</th>
                 <th className="px-4 py-3">Name</th><th className="px-4 py-3">Phone</th>
                 <th className="px-4 py-3">Source</th><th className="px-4 py-3">Project</th><th className="px-4 py-3">Campaign</th>
                 <th className="px-4 py-3">Stage</th><th className="px-4 py-3">Agent</th><th className="px-4 py-3">Assign</th><th className="px-4 py-3">Actions</th>
@@ -184,9 +196,9 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
             </thead>
             <tbody>
               {loading ? (
-                <TableSkeleton rows={6} cols={10} />
+                <TableSkeleton rows={6} cols={11} />
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={10}>
+                <tr><td colSpan={11}>
                   <EmptyState icon="📋" title="No leads in this queue"
                     hint={hasFilters ? 'Try different filters.' : `Leads will appear here as they enter ${label.toLowerCase()}.`} />
                 </td></tr>
@@ -197,6 +209,7 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
                   <tr key={l.id} className="border-b border-[#e5e7eb] last:border-0 hover:bg-[#f3f4f6] transition-colors"
                     style={{ boxShadow: `inset 3px 0 0 ${stageColor(l.stage)}` }}>
                     <td className={`px-3 ${rowPad}`}><input type="checkbox" checked={selected.has(l.id)} onChange={() => toggleSelect(l.id)} className="accent-[#5757e6]" /></td>
+                    <td className={`px-4 ${rowPad} text-xs font-mono text-[#6B7280]`}>{l.entry_id}</td>
                     <td className={`px-4 ${rowPad} text-[#111827]`}>{l.name}</td>
                     <td className={`px-4 ${rowPad} text-[#4B5563] font-mono text-xs`}>{l.phone}</td>
                     <td className={`px-4 ${rowPad}`}><Pill label={CHANNEL_LABELS[l.channel]} color={CHANNEL_COLORS[l.channel]} /></td>

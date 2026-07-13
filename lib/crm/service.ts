@@ -15,7 +15,7 @@
 import {
   SEED_STATUSES, SEED_PROJECTS, SEED_TEAMS, SEED_USERS, SEED_LEADS,
   SEED_COMMENTS, SEED_REMINDERS, SEED_DISTRIBUTIONS, SEED_ATTENDANCE, SEED_CALL_ATTEMPTS,
-  makeLead,
+  makeLead, formatEntryId,
 } from './mock-data'
 import type {
   LeadStatus, Project, Team, CrmUser, CrmLead, LeadComment, LeadReminder,
@@ -25,8 +25,8 @@ import type {
   AppNotification, NotificationType, UserRole,
 } from './types'
 
-// v6: added user-facing notifications — bump to reseed.
-const KEY = 'qualex-crm-v6'
+// v7: added unique lead entry IDs — bump to reseed.
+const KEY = 'qualex-crm-v7'
 /** Same-tab live-update signal for the notification bell (cross-tab updates arrive via the native `storage` event). */
 export const NOTIFICATIONS_EVENT = 'qualex-notifications-updated'
 
@@ -99,6 +99,19 @@ export function resetCrmStore() {
 
 const uid = () => Math.random().toString(36).slice(2, 10)
 const now = () => new Date().toISOString()
+
+/**
+ * Next sequential lead entry ID (DF-00001). Derived from the highest existing
+ * DF-#### in the store so imported/created leads keep a gap-free running number.
+ */
+function nextEntryId(s: Store): string {
+  let max = 0
+  for (const l of s.leads) {
+    const m = /^DF-(\d+)$/.exec(l.entry_id ?? '')
+    if (m) max = Math.max(max, Number(m[1]))
+  }
+  return formatEntryId(max + 1)
+}
 const delay = <T>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 120))
 
 // ---------------------------------------------------------------- STATUSES
@@ -195,7 +208,7 @@ export async function listLeads(filter: LeadFilter = {}): Promise<CrmLead[]> {
   if (filter.to) leads = leads.filter((l) => l.created_at <= filter.to!)
   if (filter.search) {
     const q = filter.search.toLowerCase()
-    leads = leads.filter((l) => l.name.toLowerCase().includes(q) || l.phone.includes(filter.search!))
+    leads = leads.filter((l) => l.name.toLowerCase().includes(q) || l.phone.includes(filter.search!) || l.entry_id.toLowerCase().includes(q))
   }
   return delay(leads.sort((a, b) => b.created_at.localeCompare(a.created_at)))
 }
@@ -217,7 +230,7 @@ function detectDuplicate(s: Store, lead: CrmLead) {
 
 export async function createLead(input: Partial<CrmLead> & { name: string; phone: string }): Promise<CrmLead> {
   const s = read()
-  const lead = makeLead({ ...input, id: uid(), created_at: now(), updated_at: now() })
+  const lead = makeLead({ ...input, id: uid(), entry_id: nextEntryId(s), created_at: now(), updated_at: now() })
   s.leads.push(lead)
   s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: 'System', type: 'created', detail: 'Lead created' })
   detectDuplicate(s, lead)
@@ -233,7 +246,7 @@ export async function importLeads(rows: (Partial<CrmLead> & { name: string; phon
   const s = read()
   let duplicates = 0
   for (const row of rows) {
-    const lead = makeLead({ ...row, id: uid(), created_at: now(), updated_at: now() })
+    const lead = makeLead({ ...row, id: uid(), entry_id: nextEntryId(s), created_at: now(), updated_at: now() })
     s.leads.push(lead)
     s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: 'Import', type: 'created', detail: 'Imported' })
     detectDuplicate(s, lead)
@@ -623,8 +636,11 @@ export async function logCallAttempt(
     patch.callback_locked = true
     patch.callback_notified = false
   } else if (outcome === 'answered') {
-    // engaged again — clear the auto-callback lock
-    patch.next_callback_at = answeredCategory === 'specific_call_back_time' ? callbackAt : null
+    // engaged again — clear the auto-callback lock. Both "specific call back time"
+    // and "follow up needed" require the agent to book the next call (see UI),
+    // so carry that chosen time through as the (agent-set, editable) callback.
+    const needsBooking = answeredCategory === 'specific_call_back_time' || answeredCategory === 'follow_up_needed'
+    patch.next_callback_at = needsBooking ? callbackAt : null
     patch.callback_locked = false
     patch.callback_notified = false
   } else if (outcome === 'callback_scheduled') {
@@ -692,28 +708,38 @@ export async function reassignWithComment(
 const MAX_LEADS_PER_AGENT = 20
 
 /**
- * Auto-assign unassigned "new" telesales leads to agents who are:
+ * Auto-assign unassigned leads at the head of a team's flow to agents who are:
  *   1. Checked in today (and not checked out), and
  *   2. Currently holding fewer than MAX_LEADS_PER_AGENT active leads.
  * Among those eligible agents, assignment is random (not least-loaded first) —
  * each lead independently picks a random eligible agent, re-checking the cap
  * as it fills up so no one crosses the limit during this run.
+ *
+ * Telesales distributes unassigned "new" leads; Direct Sales distributes
+ * unassigned "qualified" leads that telesales handed over.
  */
-export async function autoAssignBalanced(actor: string, leadIds?: string[]): Promise<{ assigned: number; skipped: number; reason?: string }> {
+export async function autoAssignBalanced(
+  actor: string, team: 'telesales' | 'direct_sales' = 'telesales', leadIds?: string[],
+): Promise<{ assigned: number; skipped: number; reason?: string }> {
   const s = read()
+  const isDS = team === 'direct_sales'
+  const agentRole = isDS ? 'direct_sales_agent' : 'telesales_agent'
+  const teamLabel = isDS ? 'direct sales' : 'telesales'
   const today = new Date().toISOString().slice(0, 10)
   const checkedInIds = new Set(
     s.attendance.filter((a) => a.date === today && a.checked_in && !a.checked_out).map((a) => a.user_id)
   )
-  const agents = s.users.filter((u) => u.role === 'telesales_agent' && u.is_active && checkedInIds.has(u.id))
-  if (agents.length === 0) return delay({ assigned: 0, skipped: 0, reason: 'No telesales agents are currently checked in.' })
+  const agents = s.users.filter((u) => u.role === agentRole && u.is_active && checkedInIds.has(u.id))
+  if (agents.length === 0) return delay({ assigned: 0, skipped: 0, reason: `No ${teamLabel} agents are currently checked in.` })
 
-  // current active-lead load per agent (any non-terminal telesales stage they hold)
-  const ACTIVE_STAGES = ['telesales_assigned', 'telesales_in_progress']
+  // current active-lead load per agent (any non-terminal stage in this team they hold)
+  const ACTIVE_STAGES = isDS ? ['ds_assigned', 'ds_in_progress', 'id_collected'] : ['telesales_assigned', 'telesales_in_progress']
+  const agentField: keyof CrmLead = isDS ? 'assigned_direct_sales_agent' : 'assigned_telesales_agent'
   const load: Record<string, number> = {}
-  for (const a of agents) load[a.id] = s.leads.filter((l) => l.assigned_telesales_agent === a.id && ACTIVE_STAGES.includes(l.stage)).length
+  for (const a of agents) load[a.id] = s.leads.filter((l) => l[agentField] === a.id && ACTIVE_STAGES.includes(l.stage)).length
 
-  let pool = s.leads.filter((l) => l.stage === 'new' && !l.assigned_user_id)
+  const headStage = isDS ? 'qualified' : 'new'
+  let pool = s.leads.filter((l) => l.stage === headStage && !l.assigned_user_id)
   if (leadIds) pool = pool.filter((l) => leadIds.includes(l.id))
   // shuffle the pool so assignment order doesn't bias results
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[pool[i], pool[j]] = [pool[j], pool[i]] }
@@ -726,9 +752,16 @@ export async function autoAssignBalanced(actor: string, leadIds?: string[]): Pro
     if (eligible.length === 0) { skipped++; continue } // everyone checked-in is at/over the cap
     const pick = eligible[Math.floor(Math.random() * eligible.length)]
     lead.assigned_user_id = pick.id
-    lead.assigned_telesales_agent = pick.id
-    lead.stage = 'telesales_assigned'
-    lead.tele_sla_due_at = slaDue(SLA_TELE_HOURS)
+    if (isDS) {
+      lead.assigned_direct_sales_agent = pick.id
+      lead.stage = 'ds_assigned'
+      lead.direct_sales_assigned_at = now()
+      lead.ds_sla_due_at = slaDue(SLA_DS_HOURS)
+    } else {
+      lead.assigned_telesales_agent = pick.id
+      lead.stage = 'telesales_assigned'
+      lead.tele_sla_due_at = slaDue(SLA_TELE_HOURS)
+    }
     lead.updated_at = now()
     load[pick.id]++
     perAgentCount[pick.id] = (perAgentCount[pick.id] ?? 0) + 1
@@ -737,7 +770,7 @@ export async function autoAssignBalanced(actor: string, leadIds?: string[]): Pro
   }
   if (assigned > 0) {
     const actorInfo = resolveUserByName(s, actor)
-    logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'assignment', action: `Auto-assigned ${assigned} lead(s) (random, checked-in agents under ${MAX_LEADS_PER_AGENT} leads)` })
+    logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'assignment', action: `Auto-assigned ${assigned} ${teamLabel} lead(s) (random, checked-in agents under ${MAX_LEADS_PER_AGENT} leads)` })
     for (const [agentId, count] of Object.entries(perAgentCount)) {
       notifyUser(s, agentId, 'lead_assigned', 'New leads assigned', `${count} new lead(s) have been assigned to you.`, null, null, '/crm/sales')
     }

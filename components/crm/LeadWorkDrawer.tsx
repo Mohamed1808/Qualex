@@ -48,7 +48,10 @@ export default function LeadWorkDrawer({
         {/* Header */}
         <div className="px-5 py-4 border-b border-[#e5e7eb] flex items-start justify-between flex-shrink-0">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-[#111827] truncate">{lead.name}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-[#111827] truncate">{lead.name}</h3>
+              <span className="text-[10px] font-mono text-[#6B7280] bg-[#f3f4f6] border border-[#e5e7eb] rounded px-1.5 py-0.5 flex-shrink-0">{lead.entry_id}</span>
+            </div>
             <p className="text-xs text-[#6B7280] font-mono">{lead.phone}</p>
             <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-[#5757e6]/15 text-[#4444cc] capitalize">
               {lead.stage.replace(/_/g, ' ')}
@@ -87,17 +90,15 @@ export default function LeadWorkDrawer({
 
               <ReminderPanel lead={lead} currentUser={currentUser} />
 
-              {/* DS: dispositions live in KYC */}
+              {/* DS: unqualified/retired dispositions live in KYC (terminate is system-only). */}
               {isDS && <DispositionPanel lead={lead} stage={callStage} currentUser={currentUser} onDone={() => { onChanged(); onClose() }} />}
+              {/* Telesales: retired lives in KYC; qualify/unqualified is the Qualify-tab Decision. */}
+              {isTelesales && canQualify && <DispositionPanel lead={lead} stage={callStage} currentUser={currentUser} options={['retired']} onDone={() => { onChanged(); onClose() }} />}
             </>
           )}
 
           {tab === 'qualify' && canQualify && (
-            <>
-              <QualifyPanel lead={lead} currentUser={currentUser} onDone={() => { onChanged(); onClose() }} />
-              {/* Telesales: dispositions live in Qualify */}
-              <DispositionPanel lead={lead} stage={callStage} currentUser={currentUser} onDone={() => { onChanged(); onClose() }} />
-            </>
+            <QualifyPanel lead={lead} stage={callStage} currentUser={currentUser} onDone={() => { onChanged(); onClose() }} />
           )}
         </div>
       </div>
@@ -303,8 +304,10 @@ function CallAttemptsPanel({ lead, stage, attempts, currentUser, onLogged }: {
   let streak = 0
   for (let i = ordered.length - 1; i >= 0; i--) { if (ordered[i].outcome === 'no_answer') streak++; else break }
   const locked = lead.stage === 'terminated' || lead.stage === 'unreachable'
-  const needsCallbackTime = outcome === 'answered' && category === 'specific_call_back_time'
-  const callbackError = touched && needsCallbackTime && !callbackAt ? 'Pick the requested callback date & time' : null
+  // Both "specific call back time" and "follow up needed" force the agent to book the
+  // next call before they can leave the lead.
+  const needsCallbackTime = outcome === 'answered' && (category === 'specific_call_back_time' || category === 'follow_up_needed')
+  const callbackError = touched && needsCallbackTime && !callbackAt ? 'Pick the next call date & time before saving' : null
 
   async function save() {
     setTouched(true)
@@ -373,7 +376,7 @@ function CallAttemptsPanel({ lead, stage, attempts, currentUser, onLogged }: {
   )
 }
 
-function QualifyPanel({ lead, currentUser, onDone }: { lead: CrmLead; currentUser: { id: string; name: string }; onDone: () => void }) {
+function QualifyPanel({ lead, stage, currentUser, onDone }: { lead: CrmLead; stage: CallStage; currentUser: { id: string; name: string }; onDone: () => void }) {
   const [f, setF] = useState<QualificationInput>({
     salary_bracket: lead.salary_bracket ?? '', down_payment_bracket: lead.down_payment_bracket ?? '',
     financing_program: lead.financing_program ?? 'new_car', car_source: lead.car_source ?? 'dealer',
@@ -382,9 +385,14 @@ function QualifyPanel({ lead, currentUser, onDone }: { lead: CrmLead; currentUse
   })
   const [saving, setSaving] = useState(false)
   const [touched, setTouched] = useState(false)
+  // Decision flow: closed → pick "Qualify" or "Unqualified"; unqualified needs a reason.
+  const [decision, setDecision] = useState<'none' | 'open' | 'unqualified'>('none')
+  const [reason, setReason] = useState(lead.unqualification_reason ?? '')
+  const [reasonTouched, setReasonTouched] = useState(false)
   const salaryError = touched && !f.salary_bracket ? 'Required' : null
   const downError = touched && !f.down_payment_bracket ? 'Required' : null
   const occError = touched && !f.occupation ? 'Required' : null
+  const reasonError = reasonTouched && !reason.trim() ? 'A reason is required' : null
 
   async function qualify() {
     setTouched(true)
@@ -395,6 +403,17 @@ function QualifyPanel({ lead, currentUser, onDone }: { lead: CrmLead; currentUse
     toast.success('Qualified — sent to Direct Sales')
     onDone()
   }
+
+  async function markUnqualified() {
+    setReasonTouched(true)
+    if (!reason.trim()) { toast.error('Add a reason for unqualifying'); return }
+    setSaving(true)
+    await setDisposition(lead.id, stage, 'unqualified', reason.trim(), currentUser.name, currentUser.id)
+    setSaving(false)
+    toast.success('Marked unqualified')
+    onDone()
+  }
+
   const set = (k: keyof QualificationInput, v: unknown) => setF((s) => ({ ...s, [k]: v }))
   return (
     <Section title="Qualification">
@@ -425,33 +444,95 @@ function QualifyPanel({ lead, currentUser, onDone }: { lead: CrmLead; currentUse
         <input value={f.requested_car_model} onChange={(e) => set('requested_car_model', e.target.value)} placeholder="Car model" className={inp} />
         <input type="number" value={f.requested_car_year ?? ''} onChange={(e) => set('requested_car_year', e.target.value ? Number(e.target.value) : undefined)} placeholder="Year" className={inp} />
       </div>
-      <button onClick={qualify} disabled={saving} className="mt-3 w-full bg-[#22C55E] hover:bg-[#16A34A] disabled:opacity-50 text-black font-semibold text-sm rounded-lg py-2.5 transition-colors">
-        {saving ? 'Qualifying…' : '✅ Qualify & Send to Direct Sales'}
-      </button>
+
+      {/* Decision — expands into the two possible outcomes */}
+      {decision === 'none' ? (
+        <button onClick={() => setDecision('open')} className="mt-3 w-full bg-[#5757e6] hover:bg-[#4444cc] text-white font-semibold text-sm rounded-lg py-2.5 transition-colors">
+          ⚖️ Decision
+        </button>
+      ) : decision === 'open' ? (
+        <div className="mt-3 space-y-2">
+          <button onClick={qualify} disabled={saving} className="w-full bg-[#22C55E] hover:bg-[#16A34A] disabled:opacity-50 text-black font-semibold text-sm rounded-lg py-2.5 transition-colors">
+            {saving ? 'Qualifying…' : '✅ Qualify & Send to Direct Sales'}
+          </button>
+          <button onClick={() => { setDecision('unqualified'); setReasonTouched(false) }} disabled={saving} className="w-full border border-[#F26161]/40 text-[#F26161] hover:bg-[#F26161]/5 font-semibold text-sm rounded-lg py-2.5 transition-colors">
+            ✕ Unqualified
+          </button>
+          <button onClick={() => setDecision('none')} className="w-full text-xs text-[#6B7280] hover:text-[#111827] py-1">Cancel</button>
+        </div>
+      ) : (
+        <div className="mt-3 space-y-2">
+          <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} placeholder="Reason for unqualifying (required)…" className={errCls(inp, !!reasonError)} />
+          {reasonError && <p className="text-[11px] text-[#F26161]">{reasonError}</p>}
+          <div className="flex gap-2">
+            <button onClick={markUnqualified} disabled={saving} className="flex-1 bg-[#F26161] hover:bg-[#e04b4b] disabled:opacity-50 text-white font-semibold text-sm rounded-lg py-2.5 transition-colors">
+              {saving ? 'Saving…' : 'Confirm unqualified'}
+            </button>
+            <button onClick={() => setDecision('open')} className="px-3 text-sm text-[#6B7280] hover:text-[#111827]">Back</button>
+          </div>
+        </div>
+      )}
     </Section>
   )
 }
 
-function DispositionPanel({ lead, stage, currentUser, onDone }: { lead: CrmLead; stage: CallStage; currentUser: { id: string; name: string }; onDone: () => void }) {
+/**
+ * Direct-sales KYC dispositions. Terminate is intentionally excluded — only the
+ * system auto-terminates (after the no-answer escalation). Unqualified requires
+ * an inline reason.
+ */
+function DispositionPanel({ lead, stage, currentUser, onDone, options = ['unqualified', 'retired'] }: {
+  lead: CrmLead; stage: CallStage; currentUser: { id: string; name: string }; onDone: () => void
+  options?: ('unqualified' | 'retired')[]
+}) {
   const [busy, setBusy] = useState(false)
-  async function dispose(d: Disposition) {
-    const note = d === 'unqualified' ? (window.prompt('Reason?') ?? '') : ''
+  const [unq, setUnq] = useState(false)
+  const [reason, setReason] = useState(lead.unqualification_reason ?? '')
+  const [touched, setTouched] = useState(false)
+  const reasonError = touched && !reason.trim() ? 'A reason is required' : null
+
+  async function dispose(d: Disposition, note = '') {
     setBusy(true)
     await setDisposition(lead.id, stage, d, note, currentUser.name, currentUser.id)
     setBusy(false)
     toast.success(`Marked ${d}`)
     onDone()
   }
+  async function confirmUnqualified() {
+    setTouched(true)
+    if (!reason.trim()) { toast.error('Add a reason for unqualifying'); return }
+    dispose('unqualified', reason.trim())
+  }
+
   return (
     <Section title="Actions">
-      <div className="flex flex-wrap gap-2">
-        {(['unqualified', 'no_answer', 'retired', 'terminated'] as Disposition[]).map((d) => (
-          <button key={d} disabled={busy} onClick={() => dispose(d)}
-            className="text-xs px-3 py-1.5 rounded-lg border border-[#e5e7eb] text-[#4B5563] hover:text-[#111827] hover:border-[#d1d5db] capitalize disabled:opacity-50 transition-colors">
-            {d.replace('_', ' ')}
-          </button>
-        ))}
-      </div>
+      {unq ? (
+        <div className="space-y-2">
+          <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} placeholder="Reason for unqualifying (required)…" className={errCls(inp, !!reasonError)} />
+          {reasonError && <p className="text-[11px] text-[#F26161]">{reasonError}</p>}
+          <div className="flex gap-2">
+            <button onClick={confirmUnqualified} disabled={busy} className="flex-1 bg-[#F26161] hover:bg-[#e04b4b] disabled:opacity-50 text-white text-sm font-medium rounded-lg py-2 transition-colors">
+              {busy ? 'Saving…' : 'Confirm unqualified'}
+            </button>
+            <button onClick={() => setUnq(false)} className="px-3 text-sm text-[#6B7280] hover:text-[#111827]">Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {options.includes('unqualified') && (
+            <button disabled={busy} onClick={() => { setUnq(true); setTouched(false) }}
+              className="text-xs px-3 py-1.5 rounded-lg border border-[#e5e7eb] text-[#4B5563] hover:text-[#111827] hover:border-[#d1d5db] disabled:opacity-50 transition-colors">
+              Unqualified
+            </button>
+          )}
+          {options.includes('retired') && (
+            <button disabled={busy} onClick={() => dispose('retired')}
+              className="text-xs px-3 py-1.5 rounded-lg border border-[#e5e7eb] text-[#4B5563] hover:text-[#111827] hover:border-[#d1d5db] disabled:opacity-50 transition-colors">
+              Retired
+            </button>
+          )}
+        </div>
+      )}
     </Section>
   )
 }

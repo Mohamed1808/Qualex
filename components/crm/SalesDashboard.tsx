@@ -202,7 +202,7 @@ export default function SalesDashboard() {
           </div>
           <div className="flex items-center gap-2 flex-1 sm:flex-none justify-end flex-wrap">
             <DensityToggle density={density} onChange={setDensity} />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…"
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search entry ID, name, phone…"
               className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 w-full sm:w-56 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
           </div>
         </div>
@@ -211,6 +211,7 @@ export default function SalesDashboard() {
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-white z-[1]">
               <tr className="border-b border-[#e5e7eb] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
+                <th className="px-3 py-3">Entry ID</th>
                 <th className="px-3 py-3">Date</th>
                 <th className="px-3 py-3">Name</th>
                 <th className="px-3 py-3">Phone</th>
@@ -223,9 +224,9 @@ export default function SalesDashboard() {
             </thead>
             <tbody>
               {loading ? (
-                <TableSkeleton rows={6} cols={8} />
+                <TableSkeleton rows={6} cols={9} />
               ) : visible.length === 0 ? (
-                <tr><td colSpan={8}>
+                <tr><td colSpan={9}>
                   <EmptyState icon="🗂️" title="No leads found" hint={hasFilters ? 'Try adjusting or resetting your filters.' : 'New leads assigned to you will show up here.'}
                     action={hasFilters ? { label: 'Reset filters', onClick: () => { setFilter({}); setSearch('') } } : undefined} />
                 </td></tr>
@@ -234,6 +235,7 @@ export default function SalesDashboard() {
                 const project = lead.project_id ? projectById[lead.project_id] : undefined
                 return (
                   <tr key={lead.id} className="border-b border-[#e5e7eb] last:border-0 hover:bg-[#f3f4f6] transition-colors">
+                    <td className={`px-3 ${rowPad} text-[#6B7280] font-mono text-xs whitespace-nowrap`}>{lead.entry_id}</td>
                     <td className={`px-3 ${rowPad} text-[#4B5563] text-xs whitespace-nowrap`}>{fmtDate(lead.created_at)}</td>
                     <td className={`px-3 ${rowPad} text-[#5757e6] font-medium`}>{lead.name}</td>
                     <td className={`px-3 ${rowPad} text-[#4B5563] font-mono text-xs`}>{lead.phone}</td>

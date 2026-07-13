@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ActivityLogEntry, ActivityCategory, CrmUser } from '@/lib/crm/types'
 import { listActivityLog, listUsers } from '@/lib/crm/service'
+import { useSession } from '@/lib/crm/session'
 import PageHeader from './ui/PageHeader'
 import { TableSkeleton } from './ui/Skeleton'
 import EmptyState from './ui/EmptyState'
@@ -41,6 +42,7 @@ const CATEGORY_COLORS: Record<ActivityCategory, string> = {
  * Intentionally not linked from any agent-facing screen.
  */
 export default function ActivityLogView() {
+  const { user } = useSession()
   const [rows, setRows] = useState<ActivityLogEntry[]>([])
   const [users, setUsers] = useState<CrmUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -48,6 +50,14 @@ export default function ActivityLogView() {
   const [categoryFilter, setCategoryFilter] = useState<ActivityCategory | ''>('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
+
+  // A supervisor only sees the agents under them (their team's role); admin sees all.
+  const scopedAgentRole =
+    user.role === 'telesales_supervisor' ? 'telesales_agent'
+    : user.role === 'direct_sales_supervisor' ? 'direct_sales_agent'
+    : null
+  const agents = users.filter((u) => scopedAgentRole ? u.role === scopedAgentRole : u.role.includes('agent'))
+  const allowedIds = useMemo(() => new Set(agents.map((a) => a.id)), [agents])
 
   async function reload() {
     const [r, u] = await Promise.all([
@@ -63,18 +73,19 @@ export default function ActivityLogView() {
   }
   useEffect(() => { reload() /* eslint-disable-next-line */ }, [userFilter, categoryFilter, from, to])
 
-  const agents = users.filter((u) => u.role.includes('agent'))
+  // Restrict rows to the agents this supervisor manages (admin: no restriction).
+  const scopedRows = scopedAgentRole ? rows.filter((r) => r.user_id && allowedIds.has(r.user_id)) : rows
   const hasFilters = !!(userFilter || categoryFilter || from || to)
 
   // Idle check: last activity per agent, flag if > 2 hours since last logged action while checked in.
   const lastActivityByUser = useMemo(() => {
     const m: Record<string, string> = {}
-    for (const r of rows) {
+    for (const r of scopedRows) {
       if (!r.user_id) continue
       if (!m[r.user_id] || r.at > m[r.user_id]) m[r.user_id] = r.at
     }
     return m
-  }, [rows])
+  }, [scopedRows])
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
@@ -135,9 +146,9 @@ export default function ActivityLogView() {
             <tbody>
               {loading ? (
                 <TableSkeleton rows={8} cols={5} />
-              ) : rows.length === 0 ? (
+              ) : scopedRows.length === 0 ? (
                 <tr><td colSpan={5}><EmptyState icon="🕒" title="No activity recorded" hint={hasFilters ? 'Try different filters.' : 'Activity will appear here as agents work leads.'} /></td></tr>
-              ) : rows.map((r) => (
+              ) : scopedRows.map((r) => (
                 <tr key={r.id} className="border-b border-[#e5e7eb] last:border-0 hover:bg-[#f3f4f6] transition-colors">
                   <td className="px-4 py-3 text-xs text-[#4B5563] whitespace-nowrap">{new Date(r.at).toLocaleString()}</td>
                   <td className="px-4 py-3 text-[#111827] text-sm">{r.user_name}</td>
