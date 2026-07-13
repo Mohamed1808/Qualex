@@ -413,6 +413,7 @@ export async function listActivityLog(filter: ActivityFilter = {}): Promise<Acti
   let rows = read().activityLog
   if (filter.user_id) rows = rows.filter((r) => r.user_id === filter.user_id)
   if (filter.category) rows = rows.filter((r) => r.category === filter.category)
+  if (filter.lead_id) rows = rows.filter((r) => r.lead_id === filter.lead_id)
   if (filter.from) rows = rows.filter((r) => r.at >= filter.from!)
   if (filter.to) rows = rows.filter((r) => r.at <= filter.to!)
   return delay(rows.sort((a, b) => b.at.localeCompare(a.at)))

@@ -2,12 +2,29 @@
 
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import type { CrmLead, LeadComment, LeadHistoryEntry } from '@/lib/crm/types'
-import { listComments, listHistory, addComment } from '@/lib/crm/service'
+import type { CrmLead, LeadComment, LeadHistoryEntry, ActivityCategory } from '@/lib/crm/types'
+import { listComments, listHistory, addComment, listActivityLog } from '@/lib/crm/service'
 import { Skeleton } from './ui/Skeleton'
 
 const TYPE_ICON: Record<LeadHistoryEntry['type'], string> = {
   created: '✨', status_change: '🏷️', assignment: '🎯', comment: '💬', contact: '📞',
+}
+
+const ACTIVITY_ICON: Record<ActivityCategory, string> = {
+  attendance: '🕒', call_attempt: '📞', qualify: '✅', disposition: '🏷️',
+  kyc_update: '📝', credit_submit: '🏦', credit_decision: '📋', reminder: '⏰',
+  reassignment: '🔁', assignment: '🎯', comment: '💬',
+}
+
+// A single log line the drawer renders, sourced from either the generic lead
+// history (created/status/assignment/comment/contact) or the fuller agent
+// activity log (which additionally carries the actor's role and reminders).
+interface LogLine {
+  id: string
+  at: string
+  actor_name: string
+  icon: string
+  detail: string
 }
 
 export default function LeadHistoryDrawer({
@@ -19,15 +36,20 @@ export default function LeadHistoryDrawer({
 }) {
   const [tab, setTab] = useState<'timeline' | 'comments'>('timeline')
   const [comments, setComments] = useState<LeadComment[]>([])
-  const [history, setHistory] = useState<LeadHistoryEntry[]>([])
+  const [log, setLog] = useState<LogLine[]>([])
   const [body, setBody] = useState('')
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
   async function reload() {
-    const [c, h] = await Promise.all([listComments(lead.id), listHistory(lead.id)])
+    const [c, h, a] = await Promise.all([listComments(lead.id), listHistory(lead.id), listActivityLog({ lead_id: lead.id })])
     setComments(c)
-    setHistory(h)
+    // The activity log is the fuller record (adds actor role + reminders); the generic
+    // history log only adds entries that have no activity-log counterpart, like "Lead created".
+    const activityTexts = new Set(a.map((x) => x.action))
+    const fromActivity: LogLine[] = a.map((x) => ({ id: x.id, at: x.at, actor_name: x.user_name, icon: ACTIVITY_ICON[x.category], detail: x.action }))
+    const fromHistoryOnly: LogLine[] = h.filter((x) => !activityTexts.has(x.detail)).map((x) => ({ id: x.id, at: x.at, actor_name: x.actor_name, icon: TYPE_ICON[x.type], detail: x.detail }))
+    setLog([...fromActivity, ...fromHistoryOnly].sort((x, y) => y.at.localeCompare(x.at)))
     setLoading(false)
   }
   useEffect(() => { reload() /* eslint-disable-next-line */ }, [lead.id])
@@ -74,14 +96,14 @@ export default function LeadHistoryDrawer({
               <Skeleton className="h-4 w-2/3 mt-4" /><Skeleton className="h-3 w-1/3" />
             </div>
           ) : tab === 'timeline' ? (
-            history.length === 0 ? (
+            log.length === 0 ? (
               <p className="text-xs text-[#4B5563]">No history yet.</p>
             ) : (
               <ol className="relative border-l border-[#e5e7eb] ml-2">
-                {history.map((h) => (
+                {log.map((h) => (
                   <li key={h.id} className="mb-4 ml-4">
                     <span className="absolute -left-[9px] w-4 h-4 rounded-full bg-[#f3f4f6] border border-[#e5e7eb] flex items-center justify-center text-[8px]">
-                      {TYPE_ICON[h.type]}
+                      {h.icon}
                     </span>
                     <p className="text-xs text-[#111827]">{h.detail}</p>
                     <p className="text-[10px] text-[#4B5563] mt-0.5">

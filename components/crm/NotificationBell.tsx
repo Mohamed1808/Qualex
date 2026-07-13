@@ -25,17 +25,24 @@ export default function NotificationBell({ userId }: { userId: string }) {
   const router = useRouter()
   const [items, setItems] = useState<AppNotification[]>([])
   const [open, setOpen] = useState(false)
+  const [alertQueue, setAlertQueue] = useState<AppNotification[]>([])
   const dropdownRef = useRef<HTMLDivElement>(null)
   const seenIds = useRef<Set<string>>(new Set())
   const firstLoad = useRef(true)
 
   const reload = useCallback(async () => {
     const rows = await listNotifications(userId)
-    // Toast anything new & unread since the last time we checked (skip the very first load).
+    // Surface anything new & unread since the last time we checked (skip the very first load).
+    // Scheduled-callback alerts get a blocking centered modal instead of a toast — they need
+    // to interrupt the agent, not get lost in the corner.
     if (!firstLoad.current) {
       for (const n of rows) {
         if (!seenIds.current.has(n.id) && !n.is_read) {
-          toast(n.title, { description: n.message, icon: TYPE_ICON[n.type] })
+          if (n.type === 'callback_due') {
+            setAlertQueue((q) => (q.some((x) => x.id === n.id) ? q : [...q, n]))
+          } else {
+            toast(n.title, { description: n.message, icon: TYPE_ICON[n.type] })
+          }
         }
       }
     }
@@ -77,6 +84,16 @@ export default function NotificationBell({ userId }: { userId: string }) {
 
   async function handleMarkAll() {
     await markAllNotificationsRead(userId)
+    reload()
+  }
+
+  const activeAlert = alertQueue[0] ?? null
+
+  async function dismissAlert(goToLead: boolean) {
+    if (!activeAlert) return
+    await markNotificationRead(activeAlert.id)
+    setAlertQueue((q) => q.slice(1))
+    if (goToLead && activeAlert.link) router.push(activeAlert.link)
     reload()
   }
 
@@ -123,6 +140,35 @@ export default function NotificationBell({ userId }: { userId: string }) {
                 </span>
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {activeAlert && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 text-center animate-[slideIn_0.2s_ease-out]">
+            <div className="mx-auto w-14 h-14 rounded-full bg-[#F26161]/10 flex items-center justify-center text-3xl mb-4">
+              ⚠️
+            </div>
+            <h3 className="text-base font-semibold text-[#111827]">{activeAlert.title}</h3>
+            <p className="text-sm text-[#4B5563] mt-1.5">{activeAlert.message}</p>
+            {alertQueue.length > 1 && (
+              <p className="text-[11px] text-[#9CA3AF] mt-2">+{alertQueue.length - 1} more callback(s) due</p>
+            )}
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => dismissAlert(false)}
+                className="flex-1 border border-[#e5e7eb] text-[#4B5563] hover:bg-[#f3f4f6] text-sm font-medium rounded-lg py-2.5 transition-colors"
+              >
+                Dismiss
+              </button>
+              <button
+                onClick={() => dismissAlert(true)}
+                className="flex-1 bg-[#5757e6] hover:bg-[#4444cc] text-white text-sm font-medium rounded-lg py-2.5 transition-colors"
+              >
+                View lead
+              </button>
+            </div>
           </div>
         </div>
       )}

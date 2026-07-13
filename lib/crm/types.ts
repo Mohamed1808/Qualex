@@ -312,6 +312,7 @@ export interface AppNotification {
 export interface ActivityFilter {
   user_id?: string
   category?: ActivityCategory
+  lead_id?: string
   from?: string
   to?: string
 }

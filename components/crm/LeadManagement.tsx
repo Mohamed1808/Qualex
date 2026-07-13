@@ -15,7 +15,11 @@ import { Pill } from './ui/Pill'
 import { TableSkeleton } from './ui/Skeleton'
 import EmptyState from './ui/EmptyState'
 import { DensityToggle, useDensity } from './ui/useDensity'
-import { CHANNELS, CHANNEL_LABELS, CHANNEL_COLORS } from '@/lib/crm/constants'
+import { CHANNELS, CHANNEL_LABELS, CHANNEL_COLORS, SALARY_BRACKETS, DOWN_PAYMENT_BRACKETS, VEHICLE_SOURCES } from '@/lib/crm/constants'
+
+const salaryLabel = (v: string | null) => SALARY_BRACKETS.find((x) => x.value === v)?.label ?? (v ?? '')
+const downPaymentLabel = (v: string | null) => DOWN_PAYMENT_BRACKETS.find((x) => x.value === v)?.label ?? (v ?? '')
+const carSourceLabel = (v: string | null) => VEHICLE_SOURCES.find((x) => x.value === v)?.label ?? (v ?? '')
 
 const ACTOR = { id: 'u-admin', name: 'Mohamed Moheb' }
 
@@ -48,14 +52,34 @@ export default function LeadManagement() {
 
   function exportCsv() {
     const rows = leads.map((l) => ({
-      Date: new Date(l.created_at).toLocaleDateString('en-CA'),
+      'Entry Date': new Date(l.created_at).toLocaleDateString('en-CA'),
+      'Entry Time': new Date(l.created_at).toLocaleString(),
       Name: l.name, Phone: l.phone,
       Source: CHANNEL_LABELS[l.channel],
       Campaign: l.campaign ?? '',
       Project: projectById[l.project_id ?? '']?.name ?? '',
       Status: statusById[l.status_id ?? '']?.name ?? '',
+      Stage: l.stage,
       Assigned: users.find((u) => u.id === l.assigned_user_id)?.full_name ?? '',
       NationalID: l.customer_national_id ?? '',
+      // ---- Telesales KYC / qualify ----
+      'TS: Occupation': l.occupation ?? '',
+      'TS: Salary Bracket': salaryLabel(l.salary_bracket),
+      'TS: Down Payment Bracket': downPaymentLabel(l.down_payment_bracket),
+      'TS: Financing Program': l.financing_program ?? '',
+      'TS: Car Source': carSourceLabel(l.car_source),
+      'TS: Knows Specific Car': l.knows_specific_car === null ? '' : l.knows_specific_car ? 'Yes' : 'No',
+      'TS: Requested Brand': l.requested_car_brand ?? '',
+      'TS: Requested Model': l.requested_car_model ?? '',
+      'TS: Requested Year': l.requested_car_year ?? '',
+      'TS: Disposition': l.tele_disposition ?? '',
+      'TS: Qualified At': l.telesales_qualified_at ? new Date(l.telesales_qualified_at).toLocaleString() : '',
+      // ---- Direct Sales KYC / qualify ----
+      'DS: Expected Program': l.expected_program ?? '',
+      'DS: ID Document': l.id_document_url ? 'Uploaded' : '',
+      'DS: Assigned At': l.direct_sales_assigned_at ? new Date(l.direct_sales_assigned_at).toLocaleString() : '',
+      'DS: Disposition': l.ds_disposition ?? '',
+      'DS: Unqualification Reason': l.unqualification_reason ?? '',
     }))
     const csv = Papa.unparse(rows)
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
