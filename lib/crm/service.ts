@@ -25,8 +25,8 @@ import type {
   AppNotification, NotificationType, UserRole,
 } from './types'
 
-// v8: status is now action-driven (seeded from stage) — bump to reseed.
-const KEY = 'qualex-crm-v8'
+// v9: added pipeline-outcome statuses (Qualified/Unqualified/Retired/…) — bump to reseed.
+const KEY = 'qualex-crm-v9'
 /** Same-tab live-update signal for the notification bell (cross-tab updates arrive via the native `storage` event). */
 export const NOTIFICATIONS_EVENT = 'qualex-notifications-updated'
 
@@ -399,15 +399,16 @@ const SLA_DS_HOURS = 24
 const STATUS_FRESH = 'st-fresh'
 const STATUS_NO_ANSWER = 'st-noanswer'
 const STATUS_FOLLOW_UP = 'st-followup'
-const STATUS_WAITING = 'st-waiting'
+const STATUS_WAITING_ID = 'st-waitingid'
 const STATUS_REQUEST = 'st-request'
-const STATUS_ONGOING = 'st-ongoing'
-const STATUS_COMPLETED = 'st-completed'
-const STATUS_NOT_INTERESTED = 'st-notinterested'
-const STATUS_JUNK = 'st-junk'
+const STATUS_QUALIFIED = 'st-qualified'
+const STATUS_UNQUALIFIED = 'st-unqualified'
+const STATUS_RETIRED = 'st-retired'
+const STATUS_TERMINATED = 'st-terminated'
+const STATUS_CREDIT_APPROVED = 'st-creditapproved'
 
 const CATEGORY_STATUS: Record<import('./types').AnsweredCategory, string> = {
-  pending_id: STATUS_WAITING,
+  pending_id: STATUS_WAITING_ID,
   inquiry_only: STATUS_REQUEST,
   high_interest: STATUS_REQUEST,
   follow_up_needed: STATUS_FOLLOW_UP,
@@ -579,7 +580,7 @@ export interface QualificationInput {
 export async function qualifyLead(leadId: string, qual: QualificationInput, actor: string, actorId?: string): Promise<void> {
   const s = read()
   const leadForLog = s.leads.find((l) => l.id === leadId)
-  patchLead(s, leadId, { ...qual, stage: 'qualified', tele_disposition: 'qualified', telesales_qualified_at: now(), assigned_user_id: null, status_id: autoStatus(s, STATUS_ONGOING, leadForLog?.status_id ?? null) })
+  patchLead(s, leadId, { ...qual, stage: 'qualified', tele_disposition: 'qualified', telesales_qualified_at: now(), assigned_user_id: null, status_id: autoStatus(s, STATUS_QUALIFIED, leadForLog?.status_id ?? null) })
   logHistory(s, leadId, actor, 'status_change', 'Qualified by telesales → sent to Direct Sales')
   const actorInfo = resolveUserById(s, actorId)
   logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'qualify', action: 'Qualified lead — sent to Direct Sales', leadId, leadName: leadForLog?.name })
@@ -609,9 +610,10 @@ export async function setDisposition(leadId: string, stage: CallStage, dispositi
   if (to) patch.stage = to
   // Reflect the disposition in the sub-status chip.
   const dispStatus =
-    disposition === 'unqualified' ? STATUS_NOT_INTERESTED
+    disposition === 'unqualified' ? STATUS_UNQUALIFIED
     : disposition === 'no_answer' ? STATUS_NO_ANSWER
-    : (disposition === 'retired' || disposition === 'terminated') ? STATUS_JUNK
+    : disposition === 'retired' ? STATUS_RETIRED
+    : disposition === 'terminated' ? STATUS_TERMINATED
     : null
   if (dispStatus) patch.status_id = autoStatus(s, dispStatus, leadForLog?.status_id ?? null)
   patchLead(s, leadId, patch)
@@ -643,7 +645,7 @@ export async function logCallAttempt(
 
   // After 3 no-answers (each with its scheduled callback), a further no-answer terminates.
   if (streak >= 3) {
-    patchLead(s, leadId, { stage: 'terminated', callback_locked: true, next_callback_at: null, callback_notified: false, status_id: autoStatus(s, STATUS_JUNK, leadForLog?.status_id ?? null) })
+    patchLead(s, leadId, { stage: 'terminated', callback_locked: true, next_callback_at: null, callback_notified: false, status_id: autoStatus(s, STATUS_TERMINATED, leadForLog?.status_id ?? null) })
     logHistory(s, leadId, agentName, 'status_change', 'Auto-terminated after 3 no-answers and callbacks elapsed')
     logActivity(s, { userId: actorInfo.id, userName: agentName, role: actorInfo.role, category: 'call_attempt', action: 'Lead auto-terminated after 3 no-answers', leadId, leadName: leadForLog?.name })
     const supervisorRole = stage === 'direct_sales' ? 'direct_sales_supervisor' : 'telesales_supervisor'
@@ -889,7 +891,7 @@ export async function recordCreditDecision(leadId: string, decision: 'approved' 
   patchLead(s, leadId, {
     stage: decision, ds_disposition: decision === 'approved' ? 'qualified' : 'unqualified',
     unqualification_reason: decision === 'rejected' ? (note || 'Credit rejected') : null,
-    status_id: autoStatus(s, decision === 'approved' ? STATUS_COMPLETED : STATUS_NOT_INTERESTED, leadForLog?.status_id ?? null),
+    status_id: autoStatus(s, decision === 'approved' ? STATUS_CREDIT_APPROVED : STATUS_UNQUALIFIED, leadForLog?.status_id ?? null),
   })
   logHistory(s, leadId, actor, 'status_change', `Credit ${decision}${note ? ` — ${note}` : ''}`)
   const actorInfo = resolveUserById(s, actorId)

@@ -33,6 +33,13 @@ export const SEED_STATUSES: LeadStatus[] = [
   { id: 'st-wasent', name: '(WA) Sent', color: '#25D366', sort_order: 13, category: 'open', is_default: false, is_active: true },
   { id: 'st-warecv', name: '(WA) Recv', color: '#128C7E', sort_order: 14, category: 'open', is_default: false, is_active: true },
   { id: 'st-notinterested', name: 'Not interested', color: '#F26161', sort_order: 15, category: 'lost', is_default: false, is_active: true },
+  // Pipeline-outcome statuses (driven automatically by agent actions).
+  { id: 'st-waitingid', name: 'Waiting for ID', color: '#7C3AED', sort_order: 16, category: 'open', is_default: false, is_active: true },
+  { id: 'st-qualified', name: 'Qualified', color: '#10B981', sort_order: 17, category: 'open', is_default: false, is_active: true },
+  { id: 'st-unqualified', name: 'Unqualified', color: '#EF4444', sort_order: 18, category: 'lost', is_default: false, is_active: true },
+  { id: 'st-retired', name: 'Retired', color: '#9CA3AF', sort_order: 19, category: 'lost', is_default: false, is_active: true },
+  { id: 'st-terminated', name: 'Terminated', color: '#DC2626', sort_order: 20, category: 'lost', is_default: false, is_active: true },
+  { id: 'st-creditapproved', name: 'Credit Approved', color: '#059669', sort_order: 21, category: 'won', is_default: false, is_active: true },
 ]
 
 export const SEED_PROJECTS: Project[] = [
@@ -103,17 +110,17 @@ const STATUS_FOR_STAGE: Record<LeadStage, string> = {
   new: 'st-fresh',
   telesales_assigned: 'st-fresh',
   telesales_in_progress: 'st-followup',
-  qualified: 'st-ongoing',
+  qualified: 'st-qualified',
   ds_assigned: 'st-fresh',
   ds_in_progress: 'st-followup',
   id_collected: 'st-waiting',
   credit_submitted: 'st-ongoing',
-  approved: 'st-completed',
-  rejected: 'st-notinterested',
-  unqualified: 'st-notinterested',
+  approved: 'st-creditapproved',
+  rejected: 'st-unqualified',
+  unqualified: 'st-unqualified',
   unreachable: 'st-noanswer',
-  retired: 'st-junk',
-  terminated: 'st-junk',
+  retired: 'st-retired',
+  terminated: 'st-terminated',
 }
 
 /** Build a fully-populated lead with pipeline defaults. */
