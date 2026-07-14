@@ -111,9 +111,9 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
   async function runAutoAssign() {
     const res = await autoAssignBalanced(CURRENT.name, team)
     const headLabel = team === 'telesales' ? 'new' : 'qualified'
-    if (res.assigned === 0 && res.skipped === 0) toast.info(`No unassigned "${headLabel}" leads to distribute`)
-    else if (res.assigned === 0) toast.error(res.reason ?? 'Could not assign any leads')
-    else toast.success(`Auto-assigned ${res.assigned} lead(s) across checked-in agents${res.skipped ? ` — ${res.reason}` : ''}`)
+    if (res.assigned > 0) toast.success(`Auto-assigned ${res.assigned} lead(s) across checked-in agents${res.skipped ? ` — ${res.reason}` : ''}`)
+    else if (res.reason) toast.error(res.reason) // e.g. no agents checked in, or everyone at the cap
+    else toast.info(`No unassigned "${headLabel}" leads to distribute`)
     reload()
   }
 
