@@ -5,9 +5,11 @@
 
 export type StatusCategory = 'open' | 'won' | 'lost'
 
-// Which department(s) a status is visible to. Lets the admin keep telesales and
-// direct sales status lists independent (a status can belong to just one, or both).
-export type DepartmentScope = 'telesales' | 'direct_sales' | 'both'
+// Which section a status belongs to in the admin Lead Statuses view. Telesales
+// and Direct Sales keep fully separate lists (their own parallel copies);
+// "interconnected" statuses (e.g. Qualified) are the shared handoff that a lead
+// carries into both departments at once.
+export type DepartmentScope = 'telesales' | 'direct_sales' | 'interconnected'
 
 export interface LeadStatus {
   id: string

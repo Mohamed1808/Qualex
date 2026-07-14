@@ -19,10 +19,12 @@ import { DensityToggle, useDensity } from './ui/useDensity'
 import { CHANNELS, CHANNEL_LABELS, CHANNEL_COLORS } from '@/lib/crm/constants'
 import type { Project } from '@/lib/crm/types'
 
-// Each supervisor only sees the stages that belong to their own flow. "unqualified"
-// appears in both, because a lead unqualified by either side is relevant to both.
+// Each supervisor sees the stages in their own flow. "qualified" is the shared
+// interconnected handoff: it stays visible in the telesales queue AND appears in
+// the direct sales queue (so DS can pick it up without removing it from
+// telesales). "unqualified" is likewise relevant to both sides.
 const STAGES: Record<'telesales' | 'direct_sales', LeadStage[]> = {
-  telesales: ['new', 'telesales_assigned', 'telesales_in_progress', 'unqualified', 'unreachable', 'retired', 'terminated'],
+  telesales: ['new', 'telesales_assigned', 'telesales_in_progress', 'qualified', 'unqualified', 'unreachable', 'retired', 'terminated'],
   direct_sales: ['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'approved', 'unqualified'],
 }
 

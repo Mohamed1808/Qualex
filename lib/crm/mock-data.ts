@@ -17,18 +17,32 @@ import type {
 
 // Exact status set requested by the admin — do not add any more without being asked.
 export const SEED_STATUSES: LeadStatus[] = [
-  { id: 'st-fresh', name: 'Fresh', color: '#5757e6', sort_order: 1, category: 'open', department_scope: 'both', is_default: true, is_active: true },
-  { id: 'st-noanswer', name: 'No Answer', color: '#F59E0B', sort_order: 2, category: 'open', department_scope: 'both', is_default: false, is_active: true },
-  { id: 'st-followup', name: 'Follow Up', color: '#3B82F6', sort_order: 3, category: 'open', department_scope: 'both', is_default: false, is_active: true },
-  { id: 'st-waiting', name: 'Waiting', color: '#A855F7', sort_order: 4, category: 'open', department_scope: 'direct_sales', is_default: false, is_active: true },
-  { id: 'st-request', name: 'Request', color: '#8B5CF6', sort_order: 5, category: 'open', department_scope: 'both', is_default: false, is_active: true },
-  { id: 'st-notinterested', name: 'Not interested', color: '#F26161', sort_order: 6, category: 'lost', department_scope: 'both', is_default: false, is_active: true },
-  { id: 'st-waitingid', name: 'Waiting for ID', color: '#7C3AED', sort_order: 7, category: 'open', department_scope: 'both', is_default: false, is_active: true },
-  { id: 'st-qualified', name: 'Qualified', color: '#10B981', sort_order: 8, category: 'open', department_scope: 'both', is_default: false, is_active: true },
-  { id: 'st-unqualified', name: 'Unqualified', color: '#EF4444', sort_order: 9, category: 'lost', department_scope: 'both', is_default: false, is_active: true },
-  { id: 'st-retired', name: 'Retired', color: '#9CA3AF', sort_order: 10, category: 'lost', department_scope: 'both', is_default: false, is_active: true },
-  { id: 'st-terminated', name: 'Terminated', color: '#DC2626', sort_order: 11, category: 'lost', department_scope: 'both', is_default: false, is_active: true },
-  { id: 'st-applied', name: 'Applied', color: '#059669', sort_order: 12, category: 'won', department_scope: 'direct_sales', is_default: false, is_active: true },
+  // ---- Telesales statuses (own list) — Fresh is the import default ----
+  { id: 'ts-fresh', name: 'Fresh', color: '#5757e6', sort_order: 1, category: 'open', department_scope: 'telesales', is_default: true, is_active: true },
+  { id: 'ts-noanswer', name: 'No Answer', color: '#F59E0B', sort_order: 2, category: 'open', department_scope: 'telesales', is_default: false, is_active: true },
+  { id: 'ts-followup', name: 'Follow Up', color: '#3B82F6', sort_order: 3, category: 'open', department_scope: 'telesales', is_default: false, is_active: true },
+  { id: 'ts-waitingid', name: 'Waiting for ID', color: '#7C3AED', sort_order: 4, category: 'open', department_scope: 'telesales', is_default: false, is_active: true },
+  { id: 'ts-request', name: 'Request', color: '#8B5CF6', sort_order: 5, category: 'open', department_scope: 'telesales', is_default: false, is_active: true },
+  { id: 'ts-notinterested', name: 'Not interested', color: '#F26161', sort_order: 6, category: 'lost', department_scope: 'telesales', is_default: false, is_active: true },
+  { id: 'ts-unqualified', name: 'Unqualified', color: '#EF4444', sort_order: 7, category: 'lost', department_scope: 'telesales', is_default: false, is_active: true },
+  { id: 'ts-retired', name: 'Retired', color: '#9CA3AF', sort_order: 8, category: 'lost', department_scope: 'telesales', is_default: false, is_active: true },
+  { id: 'ts-terminated', name: 'Terminated', color: '#DC2626', sort_order: 9, category: 'lost', department_scope: 'telesales', is_default: false, is_active: true },
+
+  // ---- Direct Sales statuses (own list) ----
+  { id: 'ds-fresh', name: 'Fresh', color: '#5757e6', sort_order: 10, category: 'open', department_scope: 'direct_sales', is_default: false, is_active: true },
+  { id: 'ds-noanswer', name: 'No Answer', color: '#F59E0B', sort_order: 11, category: 'open', department_scope: 'direct_sales', is_default: false, is_active: true },
+  { id: 'ds-followup', name: 'Follow Up', color: '#3B82F6', sort_order: 12, category: 'open', department_scope: 'direct_sales', is_default: false, is_active: true },
+  { id: 'ds-waitingid', name: 'Waiting for ID', color: '#7C3AED', sort_order: 13, category: 'open', department_scope: 'direct_sales', is_default: false, is_active: true },
+  { id: 'ds-request', name: 'Request', color: '#8B5CF6', sort_order: 14, category: 'open', department_scope: 'direct_sales', is_default: false, is_active: true },
+  { id: 'ds-waiting', name: 'Waiting', color: '#A855F7', sort_order: 15, category: 'open', department_scope: 'direct_sales', is_default: false, is_active: true },
+  { id: 'ds-notinterested', name: 'Not interested', color: '#F26161', sort_order: 16, category: 'lost', department_scope: 'direct_sales', is_default: false, is_active: true },
+  { id: 'ds-unqualified', name: 'Unqualified', color: '#EF4444', sort_order: 17, category: 'lost', department_scope: 'direct_sales', is_default: false, is_active: true },
+  { id: 'ds-retired', name: 'Retired', color: '#9CA3AF', sort_order: 18, category: 'lost', department_scope: 'direct_sales', is_default: false, is_active: true },
+  { id: 'ds-terminated', name: 'Terminated', color: '#DC2626', sort_order: 19, category: 'lost', department_scope: 'direct_sales', is_default: false, is_active: true },
+  { id: 'ds-applied', name: 'Applied', color: '#059669', sort_order: 20, category: 'won', department_scope: 'direct_sales', is_default: false, is_active: true },
+
+  // ---- Interconnected (shared handoff — visible to both departments) ----
+  { id: 'st-qualified', name: 'Qualified', color: '#10B981', sort_order: 21, category: 'open', department_scope: 'interconnected', is_default: false, is_active: true },
 ]
 
 export const SEED_PROJECTS: Project[] = [

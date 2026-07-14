@@ -79,7 +79,7 @@ export default function SalesDashboard() {
   // for their own department (or "both"). Managers browsing this view see everything.
   const department = user.role === 'telesales_agent' ? 'telesales' : user.role === 'direct_sales_agent' ? 'direct_sales' : null
   const visibleStatuses = useMemo(
-    () => department ? statuses.filter((s) => s.department_scope === department || s.department_scope === 'both') : statuses,
+    () => department ? statuses.filter((s) => s.department_scope === department || s.department_scope === 'interconnected') : statuses,
     [statuses, department],
   )
 

@@ -72,7 +72,7 @@ export default function CrmAnalytics({ team }: { team: 'telesales' | 'direct_sal
 
   // Only show statuses that belong to this department (or both).
   const deptStatuses = useMemo(
-    () => statuses.filter((s) => s.department_scope === team || s.department_scope === 'both'),
+    () => statuses.filter((s) => s.department_scope === team || s.department_scope === 'interconnected'),
     [statuses, team],
   )
 

@@ -1,19 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import type { LeadStatus, StatusCategory, DepartmentScope } from '@/lib/crm/types'
 import { listStatuses, createStatus, updateStatus, deleteStatus, listLeads } from '@/lib/crm/service'
 import PageHeader from './ui/PageHeader'
-import { TableSkeleton } from './ui/Skeleton'
+import { CardSkeleton } from './ui/Skeleton'
 import EmptyState from './ui/EmptyState'
 
 const PALETTE = ['#5757e6', '#3B82F6', '#14B8A6', '#22C55E', '#F59E0B', '#F26161', '#A855F7', '#EC4899', '#6B7280', '#25D366']
 
+const SCOPE_ORDER: DepartmentScope[] = ['telesales', 'direct_sales', 'interconnected']
 const SCOPE_LABELS: Record<DepartmentScope, string> = {
-  telesales: 'Telesales only',
-  direct_sales: 'Direct Sales only',
-  both: 'Both departments',
+  telesales: 'Telesales',
+  direct_sales: 'Direct Sales',
+  interconnected: 'Interconnected',
+}
+const SCOPE_HINTS: Record<DepartmentScope, string> = {
+  telesales: 'Used only inside the telesales flow. Fresh is the default when leads are imported.',
+  direct_sales: 'Used only inside the direct sales flow.',
+  interconnected: 'Shared handoff statuses (e.g. Qualified) — a lead carries these into both departments at once.',
 }
 
 export default function StatusManager() {
@@ -22,7 +28,7 @@ export default function StatusManager() {
   const [name, setName] = useState('')
   const [color, setColor] = useState(PALETTE[0])
   const [category, setCategory] = useState<StatusCategory>('open')
-  const [scope, setScope] = useState<DepartmentScope>('both')
+  const [scope, setScope] = useState<DepartmentScope>('telesales')
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<{ status: LeadStatus; usageCount: number } | null>(null)
 
@@ -33,6 +39,12 @@ export default function StatusManager() {
   }
   useEffect(() => { reload() }, [])
 
+  const grouped = useMemo(() => {
+    const g: Record<DepartmentScope, LeadStatus[]> = { telesales: [], direct_sales: [], interconnected: [] }
+    for (const s of statuses) g[s.department_scope].push(s)
+    return g
+  }, [statuses])
+
   async function add() {
     if (!name.trim()) { toast.error('Enter a status name'); return }
     setSaving(true)
@@ -42,8 +54,7 @@ export default function StatusManager() {
     })
     setSaving(false)
     setName('')
-    setScope('both')
-    toast.success(`Status added — visible to ${SCOPE_LABELS[scope].toLowerCase()}`)
+    toast.success(`Status added to ${SCOPE_LABELS[scope]}`)
     reload()
   }
 
@@ -54,7 +65,7 @@ export default function StatusManager() {
 
   async function changeScope(s: LeadStatus, department_scope: DepartmentScope) {
     await updateStatus(s.id, { department_scope })
-    toast.success(`"${s.name}" is now visible to ${SCOPE_LABELS[department_scope].toLowerCase()}`)
+    toast.success(`"${s.name}" moved to ${SCOPE_LABELS[department_scope]}`)
     reload()
   }
 
@@ -71,19 +82,19 @@ export default function StatusManager() {
     reload()
   }
 
-  async function move(index: number, dir: -1 | 1) {
+  // Reorder within a section by swapping sort_order with the neighbour.
+  async function move(list: LeadStatus[], index: number, dir: -1 | 1) {
     const target = index + dir
-    if (target < 0 || target >= statuses.length) return
-    const reordered = [...statuses]
-    ;[reordered[index], reordered[target]] = [reordered[target], reordered[index]]
-    setStatuses(reordered)
-    await Promise.all(reordered.map((s, i) => updateStatus(s.id, { sort_order: i + 1 })))
+    if (target < 0 || target >= list.length) return
+    const a = list[index], b = list[target]
+    await Promise.all([updateStatus(a.id, { sort_order: b.sort_order }), updateStatus(b.id, { sort_order: a.sort_order })])
     reload()
   }
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
-      <PageHeader crumbs={[{ label: 'CRM', href: '/crm' }]} title="Lead Statuses" subtitle="Add or manage statuses. Assign each to Telesales, Direct Sales, or both — agents only see statuses scoped to their own department." />
+      <PageHeader crumbs={[{ label: 'CRM', href: '/crm' }]} title="Lead Statuses"
+        subtitle="Telesales and Direct Sales keep their own separate status lists; Interconnected statuses are the shared handoff that carries a lead into both departments." />
 
       {/* Add */}
       <div className="bg-white border border-[#e5e7eb] rounded-xl p-5">
@@ -95,21 +106,19 @@ export default function StatusManager() {
               className="w-full mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]" />
           </div>
           <div>
+            <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">Section</label>
+            <select value={scope} onChange={(e) => setScope(e.target.value as DepartmentScope)}
+              className="mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none">
+              {SCOPE_ORDER.map((sc) => <option key={sc} value={sc}>{SCOPE_LABELS[sc]}</option>)}
+            </select>
+          </div>
+          <div>
             <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">Category</label>
             <select value={category} onChange={(e) => setCategory(e.target.value as StatusCategory)}
               className="mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none">
               <option value="open">Open</option>
               <option value="won">Won</option>
               <option value="lost">Lost</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">Department</label>
-            <select value={scope} onChange={(e) => setScope(e.target.value as DepartmentScope)}
-              className="mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none">
-              <option value="both">Both departments</option>
-              <option value="telesales">Telesales only</option>
-              <option value="direct_sales">Direct Sales only</option>
             </select>
           </div>
           <div>
@@ -129,66 +138,74 @@ export default function StatusManager() {
         </div>
       </div>
 
-      {/* List */}
-      <div className="bg-white border border-[#e5e7eb] rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[#e5e7eb] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
-              <th className="px-4 py-3 w-16">Order</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Category</th>
-              <th className="px-4 py-3">Department</th>
-              <th className="px-4 py-3">State</th>
-              <th className="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <TableSkeleton rows={5} cols={6} />
-            ) : statuses.length === 0 ? (
-              <tr><td colSpan={6}><EmptyState icon="🏷️" title="No statuses yet" hint="Add your first status above." /></td></tr>
-            ) : statuses.map((s, i) => (
-              <tr key={s.id} className="border-b border-[#e5e7eb] last:border-0 hover:bg-[#f3f4f6] transition-colors">
-                <td className="px-4 py-3">
-                  <div className="flex flex-col gap-0.5">
-                    <button onClick={() => move(i, -1)} disabled={i === 0} title="Move up" className="text-[#6B7280] hover:text-[#111827] disabled:opacity-20 text-xs leading-none">▲</button>
-                    <button onClick={() => move(i, 1)} disabled={i === statuses.length - 1} title="Move down" className="text-[#6B7280] hover:text-[#111827] disabled:opacity-20 text-xs leading-none">▼</button>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="inline-flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
-                    <span className="text-[#111827]">{s.name}</span>
-                    {s.is_default && <span className="text-[10px] text-[#5757e6] bg-[#5757e6]/15 px-1.5 py-0.5 rounded">default</span>}
-                  </span>
-                </td>
-                <td className="px-4 py-3 capitalize text-[#4B5563] text-xs">{s.category}</td>
-                <td className="px-4 py-3">
-                  <select value={s.department_scope} onChange={(e) => changeScope(s, e.target.value as DepartmentScope)}
-                    className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-xs rounded-lg px-2 py-1 focus:outline-none">
-                    <option value="both">Both departments</option>
-                    <option value="telesales">Telesales only</option>
-                    <option value="direct_sales">Direct Sales only</option>
-                  </select>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${s.is_active ? 'text-[#22C55E] bg-[#22C55E]/15' : 'text-[#6B7280] bg-[#6B7280]/15'}`}>
-                    {s.is_active ? 'Active' : 'Hidden'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right space-x-3 whitespace-nowrap">
-                  <button onClick={() => toggle(s)} className="text-xs text-[#4B5563] hover:text-[#111827]">
-                    {s.is_active ? 'Hide' : 'Show'}
-                  </button>
-                  {!s.is_default && (
-                    <button onClick={() => requestRemove(s)} className="text-xs text-[#F26161] hover:underline">Delete</button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Three sections */}
+      {loading ? (
+        <div className="space-y-4"><CardSkeleton /><CardSkeleton /></div>
+      ) : (
+        SCOPE_ORDER.map((sc) => (
+          <div key={sc} className="bg-white border border-[#e5e7eb] rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-[#e5e7eb]">
+              <h3 className="text-sm font-semibold text-[#111827]">{SCOPE_LABELS[sc]} statuses</h3>
+              <p className="text-xs text-[#6B7280] mt-0.5">{SCOPE_HINTS[sc]}</p>
+            </div>
+            {grouped[sc].length === 0 ? (
+              <EmptyState icon="🏷️" title="No statuses in this section" hint="Add one above." />
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#e5e7eb] text-left text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
+                    <th className="px-4 py-2.5 w-16">Order</th>
+                    <th className="px-4 py-2.5">Status</th>
+                    <th className="px-4 py-2.5">Category</th>
+                    <th className="px-4 py-2.5">Move to</th>
+                    <th className="px-4 py-2.5">State</th>
+                    <th className="px-4 py-2.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {grouped[sc].map((s, i) => (
+                    <tr key={s.id} className="border-b border-[#e5e7eb] last:border-0 hover:bg-[#f3f4f6] transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-0.5">
+                          <button onClick={() => move(grouped[sc], i, -1)} disabled={i === 0} title="Move up" className="text-[#6B7280] hover:text-[#111827] disabled:opacity-20 text-xs leading-none">▲</button>
+                          <button onClick={() => move(grouped[sc], i, 1)} disabled={i === grouped[sc].length - 1} title="Move down" className="text-[#6B7280] hover:text-[#111827] disabled:opacity-20 text-xs leading-none">▼</button>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
+                          <span className="text-[#111827]">{s.name}</span>
+                          {s.is_default && <span className="text-[10px] text-[#5757e6] bg-[#5757e6]/15 px-1.5 py-0.5 rounded">default</span>}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 capitalize text-[#4B5563] text-xs">{s.category}</td>
+                      <td className="px-4 py-3">
+                        <select value={s.department_scope} onChange={(e) => changeScope(s, e.target.value as DepartmentScope)}
+                          className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-xs rounded-lg px-2 py-1 focus:outline-none">
+                          {SCOPE_ORDER.map((o) => <option key={o} value={o}>{SCOPE_LABELS[o]}</option>)}
+                        </select>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${s.is_active ? 'text-[#22C55E] bg-[#22C55E]/15' : 'text-[#6B7280] bg-[#6B7280]/15'}`}>
+                          {s.is_active ? 'Active' : 'Hidden'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right space-x-3 whitespace-nowrap">
+                        <button onClick={() => toggle(s)} className="text-xs text-[#4B5563] hover:text-[#111827]">
+                          {s.is_active ? 'Hide' : 'Show'}
+                        </button>
+                        {!s.is_default && (
+                          <button onClick={() => requestRemove(s)} className="text-xs text-[#F26161] hover:underline">Delete</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        ))
+      )}
 
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setConfirmDelete(null)}>
