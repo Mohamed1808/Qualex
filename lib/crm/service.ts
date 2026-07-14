@@ -25,8 +25,8 @@ import type {
   AppNotification, NotificationType, UserRole,
 } from './types'
 
-// v7: added unique lead entry IDs — bump to reseed.
-const KEY = 'qualex-crm-v7'
+// v8: status is now action-driven (seeded from stage) — bump to reseed.
+const KEY = 'qualex-crm-v8'
 /** Same-tab live-update signal for the notification bell (cross-tab updates arrive via the native `storage` event). */
 export const NOTIFICATIONS_EVENT = 'qualex-notifications-updated'
 
@@ -230,7 +230,8 @@ function detectDuplicate(s: Store, lead: CrmLead) {
 
 export async function createLead(input: Partial<CrmLead> & { name: string; phone: string }): Promise<CrmLead> {
   const s = read()
-  const lead = makeLead({ ...input, id: uid(), entry_id: nextEntryId(s), created_at: now(), updated_at: now() })
+  // New leads always start Fresh (status is agent-action-driven from here on).
+  const lead = makeLead({ ...input, id: uid(), entry_id: nextEntryId(s), status_id: STATUS_FRESH, created_at: now(), updated_at: now() })
   s.leads.push(lead)
   s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: 'System', type: 'created', detail: 'Lead created' })
   detectDuplicate(s, lead)
@@ -246,7 +247,7 @@ export async function importLeads(rows: (Partial<CrmLead> & { name: string; phon
   const s = read()
   let duplicates = 0
   for (const row of rows) {
-    const lead = makeLead({ ...row, id: uid(), entry_id: nextEntryId(s), created_at: now(), updated_at: now() })
+    const lead = makeLead({ ...row, id: uid(), entry_id: nextEntryId(s), status_id: STATUS_FRESH, created_at: now(), updated_at: now() })
     s.leads.push(lead)
     s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: 'Import', type: 'created', detail: 'Imported' })
     detectDuplicate(s, lead)
@@ -390,6 +391,34 @@ const slaDue = (hours: number) => new Date(Date.now() + hours * 3600_000).toISOS
 const SLA_TELE_HOURS = 4
 const SLA_DS_HOURS = 24
 
+// ---- Auto-status --------------------------------------------------------
+// The lead's sub-status chip is driven entirely by the agent's actions in the
+// work drawer (it is read-only in the agent portal). Each action maps to one of
+// the seeded status IDs. Applied via `autoStatus()` which no-ops if the target
+// status has been removed in the admin portal, so status edits degrade cleanly.
+const STATUS_FRESH = 'st-fresh'
+const STATUS_NO_ANSWER = 'st-noanswer'
+const STATUS_FOLLOW_UP = 'st-followup'
+const STATUS_WAITING = 'st-waiting'
+const STATUS_REQUEST = 'st-request'
+const STATUS_ONGOING = 'st-ongoing'
+const STATUS_COMPLETED = 'st-completed'
+const STATUS_NOT_INTERESTED = 'st-notinterested'
+const STATUS_JUNK = 'st-junk'
+
+const CATEGORY_STATUS: Record<import('./types').AnsweredCategory, string> = {
+  pending_id: STATUS_WAITING,
+  inquiry_only: STATUS_REQUEST,
+  high_interest: STATUS_REQUEST,
+  follow_up_needed: STATUS_FOLLOW_UP,
+  specific_call_back_time: STATUS_FOLLOW_UP,
+}
+
+/** Returns the status id only if it still exists in the store (else the current one). */
+function autoStatus(s: Store, statusId: string, current: string | null): string | null {
+  return s.statuses.some((x) => x.id === statusId) ? statusId : current
+}
+
 function patchLead(s: Store, leadId: string, patch: Partial<CrmLead>) {
   s.leads = s.leads.map((l) => (l.id === leadId ? { ...l, ...patch, updated_at: now() } : l))
 }
@@ -515,7 +544,7 @@ const DS_STAGES_FOR_SWEEP = ['ds_assigned', 'ds_in_progress', 'id_collected', 'c
 export async function assignTelesales(leadId: string, agentId: string, actor: string): Promise<void> {
   const s = read()
   const agent = s.users.find((u) => u.id === agentId)
-  patchLead(s, leadId, { stage: 'telesales_assigned', assigned_telesales_agent: agentId, assigned_user_id: agentId, tele_sla_due_at: slaDue(SLA_TELE_HOURS), tele_sla_breached: false })
+  patchLead(s, leadId, { stage: 'telesales_assigned', assigned_telesales_agent: agentId, assigned_user_id: agentId, status_id: STATUS_FRESH, tele_sla_due_at: slaDue(SLA_TELE_HOURS), tele_sla_breached: false })
   logHistory(s, leadId, actor, 'assignment', `Assigned to telesales ${agent?.full_name ?? agentId}`)
   const actorInfo = resolveUserByName(s, actor)
   const leadForLog = s.leads.find((l) => l.id === leadId)
@@ -528,7 +557,7 @@ export async function assignTelesales(leadId: string, agentId: string, actor: st
 export async function assignDirectSales(leadId: string, agentId: string, actor: string): Promise<void> {
   const s = read()
   const agent = s.users.find((u) => u.id === agentId)
-  patchLead(s, leadId, { stage: 'ds_assigned', assigned_direct_sales_agent: agentId, assigned_user_id: agentId, direct_sales_assigned_at: now(), ds_sla_due_at: slaDue(SLA_DS_HOURS), ds_sla_breached: false })
+  patchLead(s, leadId, { stage: 'ds_assigned', assigned_direct_sales_agent: agentId, assigned_user_id: agentId, status_id: STATUS_FRESH, direct_sales_assigned_at: now(), ds_sla_due_at: slaDue(SLA_DS_HOURS), ds_sla_breached: false })
   logHistory(s, leadId, actor, 'assignment', `Assigned to direct sales ${agent?.full_name ?? agentId}`)
   const actorInfo = resolveUserByName(s, actor)
   const leadForLog = s.leads.find((l) => l.id === leadId)
@@ -550,7 +579,7 @@ export interface QualificationInput {
 export async function qualifyLead(leadId: string, qual: QualificationInput, actor: string, actorId?: string): Promise<void> {
   const s = read()
   const leadForLog = s.leads.find((l) => l.id === leadId)
-  patchLead(s, leadId, { ...qual, stage: 'qualified', tele_disposition: 'qualified', telesales_qualified_at: now(), assigned_user_id: null })
+  patchLead(s, leadId, { ...qual, stage: 'qualified', tele_disposition: 'qualified', telesales_qualified_at: now(), assigned_user_id: null, status_id: autoStatus(s, STATUS_ONGOING, leadForLog?.status_id ?? null) })
   logHistory(s, leadId, actor, 'status_change', 'Qualified by telesales → sent to Direct Sales')
   const actorInfo = resolveUserById(s, actorId)
   logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'qualify', action: 'Qualified lead — sent to Direct Sales', leadId, leadName: leadForLog?.name })
@@ -578,6 +607,13 @@ export async function setDisposition(leadId: string, stage: CallStage, dispositi
     else if (disposition === 'no_answer') to = 'ds_in_progress'
   }
   if (to) patch.stage = to
+  // Reflect the disposition in the sub-status chip.
+  const dispStatus =
+    disposition === 'unqualified' ? STATUS_NOT_INTERESTED
+    : disposition === 'no_answer' ? STATUS_NO_ANSWER
+    : (disposition === 'retired' || disposition === 'terminated') ? STATUS_JUNK
+    : null
+  if (dispStatus) patch.status_id = autoStatus(s, dispStatus, leadForLog?.status_id ?? null)
   patchLead(s, leadId, patch)
   if (to) logHistory(s, leadId, actor, 'status_change', `Disposition: ${disposition}${notes ? ` — ${notes}` : ''}`)
   const actorInfo = resolveUserById(s, actorId)
@@ -607,7 +643,7 @@ export async function logCallAttempt(
 
   // After 3 no-answers (each with its scheduled callback), a further no-answer terminates.
   if (streak >= 3) {
-    patchLead(s, leadId, { stage: 'terminated', callback_locked: true, next_callback_at: null, callback_notified: false })
+    patchLead(s, leadId, { stage: 'terminated', callback_locked: true, next_callback_at: null, callback_notified: false, status_id: autoStatus(s, STATUS_JUNK, leadForLog?.status_id ?? null) })
     logHistory(s, leadId, agentName, 'status_change', 'Auto-terminated after 3 no-answers and callbacks elapsed')
     logActivity(s, { userId: actorInfo.id, userName: agentName, role: actorInfo.role, category: 'call_attempt', action: 'Lead auto-terminated after 3 no-answers', leadId, leadName: leadForLog?.name })
     const supervisorRole = stage === 'direct_sales' ? 'direct_sales_supervisor' : 'telesales_supervisor'
@@ -635,6 +671,7 @@ export async function logCallAttempt(
     patch.next_callback_at = autoCallbackAt
     patch.callback_locked = true
     patch.callback_notified = false
+    patch.status_id = autoStatus(s, STATUS_NO_ANSWER, leadForLog?.status_id ?? null)
   } else if (outcome === 'answered') {
     // engaged again — clear the auto-callback lock. Both "specific call back time"
     // and "follow up needed" require the agent to book the next call (see UI),
@@ -643,9 +680,11 @@ export async function logCallAttempt(
     patch.next_callback_at = needsBooking ? callbackAt : null
     patch.callback_locked = false
     patch.callback_notified = false
+    if (answeredCategory) patch.status_id = autoStatus(s, CATEGORY_STATUS[answeredCategory], leadForLog?.status_id ?? null)
   } else if (outcome === 'callback_scheduled') {
     patch.next_callback_at = callbackAt
     patch.callback_notified = false
+    patch.status_id = autoStatus(s, STATUS_FOLLOW_UP, leadForLog?.status_id ?? null)
   }
 
   patchLead(s, leadId, patch)
@@ -700,20 +739,18 @@ export async function reassignWithComment(
   write(s); return delay({ ok: true })
 }
 
-/**
- * Auto-assign all unassigned "new" telesales leads across active telesales
- * agents, balancing by current open-lead count (least-loaded first), with a
- * shuffle so ties are distributed randomly.
- */
 const MAX_LEADS_PER_AGENT = 20
+const ROUND_BATCH = 5
 
 /**
- * Auto-assign unassigned leads at the head of a team's flow to agents who are:
- *   1. Checked in today (and not checked out), and
- *   2. Currently holding fewer than MAX_LEADS_PER_AGENT active leads.
- * Among those eligible agents, assignment is random (not least-loaded first) —
- * each lead independently picks a random eligible agent, re-checking the cap
- * as it fills up so no one crosses the limit during this run.
+ * Auto-assign unassigned head-of-flow leads to checked-in agents in balanced
+ * rounds:
+ *   1. Only agents checked in today (and not checked out) are eligible.
+ *   2. Each round, agents are ordered by current load (lowest first) and each
+ *      receives up to ROUND_BATCH (5) leads, never exceeding MAX_LEADS_PER_AGENT
+ *      (20) in total.
+ *   3. Rounds repeat — re-sorting by load each time — until the pool is empty or
+ *      every eligible agent has hit the 20-lead cap.
  *
  * Telesales distributes unassigned "new" leads; Direct Sales distributes
  * unassigned "qualified" leads that telesales handed over.
@@ -741,36 +778,51 @@ export async function autoAssignBalanced(
   const headStage = isDS ? 'qualified' : 'new'
   let pool = s.leads.filter((l) => l.stage === headStage && !l.assigned_user_id)
   if (leadIds) pool = pool.filter((l) => leadIds.includes(l.id))
-  // shuffle the pool so assignment order doesn't bias results
-  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[pool[i], pool[j]] = [pool[j], pool[i]] }
 
-  let assigned = 0
-  let skipped = 0
-  const perAgentCount: Record<string, number> = {}
-  for (const lead of pool) {
-    const eligible = agents.filter((a) => load[a.id] < MAX_LEADS_PER_AGENT)
-    if (eligible.length === 0) { skipped++; continue } // everyone checked-in is at/over the cap
-    const pick = eligible[Math.floor(Math.random() * eligible.length)]
-    lead.assigned_user_id = pick.id
+  function assignOne(lead: CrmLead, agent: CrmUser) {
+    lead.assigned_user_id = agent.id
     if (isDS) {
-      lead.assigned_direct_sales_agent = pick.id
+      lead.assigned_direct_sales_agent = agent.id
       lead.stage = 'ds_assigned'
       lead.direct_sales_assigned_at = now()
       lead.ds_sla_due_at = slaDue(SLA_DS_HOURS)
     } else {
-      lead.assigned_telesales_agent = pick.id
+      lead.assigned_telesales_agent = agent.id
       lead.stage = 'telesales_assigned'
       lead.tele_sla_due_at = slaDue(SLA_TELE_HOURS)
     }
+    lead.status_id = autoStatus(s, STATUS_FRESH, lead.status_id)
     lead.updated_at = now()
-    load[pick.id]++
-    perAgentCount[pick.id] = (perAgentCount[pick.id] ?? 0) + 1
-    s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: actor, type: 'assignment', detail: `Auto-assigned (random, checked-in, <${MAX_LEADS_PER_AGENT} leads) to ${pick.full_name}` })
-    assigned++
+    s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: actor, type: 'assignment', detail: `Auto-assigned (checked-in, balanced rounds of ${ROUND_BATCH}, cap ${MAX_LEADS_PER_AGENT}) to ${agent.full_name}` })
   }
+
+  let assigned = 0
+  const perAgentCount: Record<string, number> = {}
+  // Balanced rounds: lowest-load agent first, up to ROUND_BATCH each, repeat.
+  while (pool.length > 0) {
+    const available = agents.filter((a) => load[a.id] < MAX_LEADS_PER_AGENT).sort((x, y) => load[x.id] - load[y.id])
+    if (available.length === 0) break // everyone is at the cap
+    let progressed = false
+    for (const agent of available) {
+      if (pool.length === 0) break
+      const room = MAX_LEADS_PER_AGENT - load[agent.id]
+      const take = Math.min(ROUND_BATCH, room, pool.length)
+      for (let k = 0; k < take; k++) {
+        const lead = pool.shift()!
+        assignOne(lead, agent)
+        load[agent.id]++
+        perAgentCount[agent.id] = (perAgentCount[agent.id] ?? 0) + 1
+        assigned++
+        progressed = true
+      }
+    }
+    if (!progressed) break
+  }
+  const skipped = pool.length
+
   if (assigned > 0) {
     const actorInfo = resolveUserByName(s, actor)
-    logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'assignment', action: `Auto-assigned ${assigned} ${teamLabel} lead(s) (random, checked-in agents under ${MAX_LEADS_PER_AGENT} leads)` })
+    logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'assignment', action: `Auto-assigned ${assigned} ${teamLabel} lead(s) (balanced rounds of ${ROUND_BATCH}, checked-in agents under ${MAX_LEADS_PER_AGENT} leads)` })
     for (const [agentId, count] of Object.entries(perAgentCount)) {
       notifyUser(s, agentId, 'lead_assigned', 'New leads assigned', `${count} new lead(s) have been assigned to you.`, null, null, '/crm/sales')
     }
@@ -792,6 +844,7 @@ export async function bulkAssign(leadIds: string[], toUserId: string, actor: str
     lead.assigned_user_id = toUserId
     if (isDS) { lead.assigned_direct_sales_agent = toUserId; if (['qualified'].includes(lead.stage)) lead.stage = 'ds_assigned'; lead.direct_sales_assigned_at = now(); lead.ds_sla_due_at = slaDue(SLA_DS_HOURS) }
     else { lead.assigned_telesales_agent = toUserId; if (lead.stage === 'new') lead.stage = 'telesales_assigned'; lead.tele_sla_due_at = slaDue(SLA_TELE_HOURS) }
+    lead.status_id = autoStatus(s, STATUS_FRESH, lead.status_id)
     lead.updated_at = now()
     s.history.push({ id: uid(), lead_id: id, at: now(), actor_name: actor, type: 'assignment', detail: `Bulk-assigned to ${target.full_name}` })
     count++
@@ -833,7 +886,11 @@ export const endBreak = (userId: string) => mutateAttendance(userId, (a) => { a.
 export async function recordCreditDecision(leadId: string, decision: 'approved' | 'rejected', note: string, actor: string, actorId?: string): Promise<void> {
   const s = read()
   const leadForLog = s.leads.find((l) => l.id === leadId)
-  patchLead(s, leadId, { stage: decision, ds_disposition: decision === 'approved' ? 'qualified' : 'unqualified', unqualification_reason: decision === 'rejected' ? (note || 'Credit rejected') : null })
+  patchLead(s, leadId, {
+    stage: decision, ds_disposition: decision === 'approved' ? 'qualified' : 'unqualified',
+    unqualification_reason: decision === 'rejected' ? (note || 'Credit rejected') : null,
+    status_id: autoStatus(s, decision === 'approved' ? STATUS_COMPLETED : STATUS_NOT_INTERESTED, leadForLog?.status_id ?? null),
+  })
   logHistory(s, leadId, actor, 'status_change', `Credit ${decision}${note ? ` — ${note}` : ''}`)
   const actorInfo = resolveUserById(s, actorId)
   logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'credit_decision', action: `Credit ${decision}${note ? ` — ${note}` : ''}`, leadId, leadName: leadForLog?.name })

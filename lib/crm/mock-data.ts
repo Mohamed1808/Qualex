@@ -75,7 +75,6 @@ export const SEED_USERS: CrmUser[] = [
 const NAMES = ['Khaled Adel', 'Mona Sherif', 'Tarek Fouad', 'Yasmin Saad', 'Hossam Gamal', 'Dina Magdy', 'Sherif Nabil', 'Amira Lotfi', 'Walid Samir', 'Rania Adel', 'Ahmed Sobhy', 'Heba Kamal', 'Mostafa Ezz', 'Laila Hany', 'Omar Fathy', 'Salma Reda', 'Karim Wael', 'Nada Sami', 'Tamer Ashraf', 'Ghada Nasr']
 const CHANNELS: LeadChannel[] = ['call_center', 'facebook', 'instagram', 'website', 'app', 'whatsapp', 'walkin']
 export const SEED_CAMPAIGNS = ['Summer 2025', 'Ramadan Offer', 'North Coast Push', 'Retargeting Q3', 'New Alamein Launch']
-const STATUS_IDS = SEED_STATUSES.map((s) => s.id)
 const PROJECT_IDS = SEED_PROJECTS.map((p) => p.id)
 const TS_AGENTS = ['u-ahmed', 'u-bahr']
 
@@ -97,6 +96,25 @@ const STAGE_PLAN: LeadStage[] = [
 
 const DS_STAGES: LeadStage[] = ['ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted']
 const QUALIFIED_PLUS: LeadStage[] = ['qualified', ...DS_STAGES, 'approved', 'rejected']
+
+// Seed the sub-status chip from the pipeline stage so the demo matches the
+// live behaviour (status is action-driven, see service.ts auto-status mapping).
+const STATUS_FOR_STAGE: Record<LeadStage, string> = {
+  new: 'st-fresh',
+  telesales_assigned: 'st-fresh',
+  telesales_in_progress: 'st-followup',
+  qualified: 'st-ongoing',
+  ds_assigned: 'st-fresh',
+  ds_in_progress: 'st-followup',
+  id_collected: 'st-waiting',
+  credit_submitted: 'st-ongoing',
+  approved: 'st-completed',
+  rejected: 'st-notinterested',
+  unqualified: 'st-notinterested',
+  unreachable: 'st-noanswer',
+  retired: 'st-junk',
+  terminated: 'st-junk',
+}
 
 /** Build a fully-populated lead with pipeline defaults. */
 /** Format a sequential entry number as a padded, human-readable ID (DF-00001). */
@@ -141,7 +159,7 @@ export const SEED_LEADS: CrmLead[] = NAMES.map((name, i) => {
     channel: CHANNELS[i % CHANNELS.length],
     campaign: SEED_CAMPAIGNS[i % SEED_CAMPAIGNS.length],
     project_id: PROJECT_IDS[i % PROJECT_IDS.length],
-    status_id: STATUS_IDS[i % STATUS_IDS.length],
+    status_id: STATUS_FOR_STAGE[stage],
     assigned_user_id: owner,
     stage,
     assigned_telesales_agent: stage === 'new' ? null : tsAgent,

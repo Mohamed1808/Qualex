@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import type { CrmLead, LeadStatus, Project, LeadFilter, LeadChannel } from '@/lib/crm/types'
 import {
-  listLeads, listStatuses, listProjects, updateLeadStatus, scheduleReminder,
+  listLeads, listStatuses, listProjects, scheduleReminder,
 } from '@/lib/crm/service'
 import LeadHistoryDrawer from './LeadHistoryDrawer'
 import LeadWorkDrawer from './LeadWorkDrawer'
@@ -86,13 +86,6 @@ export default function SalesDashboard() {
 
   const visible = leads.slice(0, pageSize)
   const hasFilters = Boolean(filter.status_id || filter.project_id || filter.channel || filter.from || filter.to || search)
-
-  async function changeStatus(lead: CrmLead, statusId: string) {
-    await updateLeadStatus(lead.id, statusId, CURRENT.name)
-    toast.success('Status updated')
-    reload()
-    listLeads(scope).then(setAllLeads)
-  }
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
@@ -248,16 +241,14 @@ export default function SalesDashboard() {
                       ) : <span className="text-[#4B5563] text-xs">—</span>}
                     </td>
                     <td className={`px-3 ${rowPad}`}>
-                      <select
-                        value={lead.status_id ?? ''}
-                        onChange={(e) => changeStatus(lead, e.target.value)}
-                        className="bg-[#f3f4f6] border border-[#e5e7eb] rounded-lg px-2 py-1 text-xs focus:outline-none"
-                        style={{ color: status?.color ?? '#4B5563' }}
-                      >
-                        {statuses.map((s) => (
-                          <option key={s.id} value={s.id} style={{ color: '#111827', backgroundColor: '#fff' }}>{s.name}</option>
-                        ))}
-                      </select>
+                      {/* Read-only — status is driven automatically by the agent's work actions. */}
+                      {status ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
+                          style={{ color: status.color, backgroundColor: `${status.color}18` }}>
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: status.color }} />
+                          {status.name}
+                        </span>
+                      ) : <span className="text-[#4B5563] text-xs">—</span>}
                     </td>
                     <td className={`px-3 ${rowPad} text-xs text-[#4B5563]`}>{lead.expire_note ?? '—'}</td>
                     <td className={`px-3 ${rowPad} whitespace-nowrap`}>
