@@ -5,12 +5,13 @@ import { toast } from 'sonner'
 import type { CrmLead, CallAttempt, CallStage, Disposition, AnsweredCategory, Project } from '@/lib/crm/types'
 import {
   listCallAttempts, logCallAttempt, qualifyLead, setDisposition, updateLead,
-  scheduleReminder, listProjects, type QualificationInput,
+  scheduleReminder, listProjects, markApplied, type QualificationInput,
 } from '@/lib/crm/service'
 import {
   ANSWERED_CATEGORIES, EXPECTED_PROGRAMS, VEHICLE_SOURCES, SALARY_BRACKETS,
   DOWN_PAYMENT_BRACKETS, CHANNEL_LABELS,
 } from '@/lib/crm/constants'
+import { stageLabel } from './ui/Pill'
 
 const TELE_STAGES = ['new', 'telesales_assigned', 'telesales_in_progress']
 const DS_STAGES = ['ds_assigned', 'ds_in_progress', 'id_collected']
@@ -54,7 +55,7 @@ export default function LeadWorkDrawer({
             </div>
             <p className="text-xs text-[#6B7280] font-mono">{lead.phone}</p>
             <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-[#5757e6]/15 text-[#4444cc] capitalize">
-              {lead.stage.replace(/_/g, ' ')}
+              {stageLabel(lead.stage)}
             </span>
           </div>
           <button onClick={onClose} aria-label="Close" className="text-[#6B7280] hover:text-[#111827] w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#f3f4f6] transition-colors flex-shrink-0">✕</button>
@@ -171,7 +172,7 @@ function TelesalesKyc({ lead, channelLabel, projectName, currentUser, onChanged 
   )
 }
 
-// ---------------- Direct Sales KYC (fetched + vehicle/program + ID + credit) ----------------
+// ---------------- Direct Sales KYC (fetched + vehicle/program + ID + Applied) ----------------
 function DirectSalesKyc({ lead, channelLabel, projectName, currentUser, onChanged, onClose }: {
   lead: CrmLead; channelLabel: string; projectName: string; currentUser: { id: string; name: string }; onChanged: () => void; onClose: () => void
 }) {
@@ -185,8 +186,8 @@ function DirectSalesKyc({ lead, channelLabel, projectName, currentUser, onChange
   const [docName, setDocName] = useState(lead.id_document_url ?? '')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [savingKyc, setSavingKyc] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const canSubmit = DS_STAGES.includes(lead.stage)
+  const [applying, setApplying] = useState(false)
+  const canApply = DS_STAGES.includes(lead.stage)
 
   function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -212,17 +213,18 @@ function DirectSalesKyc({ lead, channelLabel, projectName, currentUser, onChange
     onChanged()
   }
 
-  async function submitCredit() {
+  async function applyLead() {
     if (!docName.trim()) { toast.error('Upload the ID document first'); return }
-    setSubmitting(true)
+    setApplying(true)
     await updateLead(lead.id, {
       down_payment_bracket: downPayment || null, requested_car_brand: brand.trim() || null,
       requested_car_model: model.trim() || null, requested_car_year: year ? Number(year) : null,
       car_source: (source || 'dealer') as CrmLead['car_source'], expected_program: (program || null) as CrmLead['expected_program'],
-      id_document_url: docName.trim(), stage: 'credit_submitted',
-    }, currentUser.name, 'Documents collected → submitted to Credit', currentUser.id)
-    setSubmitting(false)
-    toast.success('Submitted to Credit')
+      id_document_url: docName.trim(),
+    }, currentUser.name, 'Deal details and ID document finalized', currentUser.id)
+    await markApplied(lead.id, currentUser.name, currentUser.id)
+    setApplying(false)
+    toast.success('Marked Applied')
     onChanged(); onClose()
   }
 
@@ -287,9 +289,9 @@ function DirectSalesKyc({ lead, channelLabel, projectName, currentUser, onChange
           </button>
         )}
         <p className="text-[10px] text-[#6B7280] mt-1">Frontend demo stores only the file name. Backend wires real file storage.</p>
-        {canSubmit && (
-          <button onClick={submitCredit} disabled={submitting} className="mt-3 w-full bg-[#5757e6] hover:bg-[#4444cc] disabled:opacity-50 text-white font-semibold text-sm rounded-lg py-2.5 transition-colors">
-            {submitting ? 'Submitting…' : '🏦 Submit to Credit'}
+        {canApply && (
+          <button onClick={applyLead} disabled={applying} className="mt-3 w-full bg-[#22C55E] hover:bg-[#16A34A] disabled:opacity-50 text-white font-semibold text-sm rounded-lg py-2.5 transition-colors">
+            {applying ? 'Saving…' : '✅ Mark as Applied'}
           </button>
         )}
       </Section>

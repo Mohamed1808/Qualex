@@ -9,7 +9,7 @@ import Funnel from './ui/Funnel'
 import { CardSkeleton } from './ui/Skeleton'
 import AgentLeadsDrawer from './AgentLeadsDrawer'
 
-const QUALIFIED_PLUS = ['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted', 'approved', 'rejected']
+const QUALIFIED_PLUS = ['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'approved']
 
 export default function CrmAnalytics({ team }: { team: 'telesales' | 'direct_sales' }) {
   const { user } = useSession()
@@ -45,18 +45,17 @@ export default function CrmAnalytics({ team }: { team: 'telesales' | 'direct_sal
   const kpis = useMemo(() => {
     const total = leads.length
     const qualified = leads.filter((l) => QUALIFIED_PLUS.includes(l.stage)).length
-    const approved = leads.filter((l) => l.stage === 'approved').length
-    const conversion = total ? Math.round((approved / total) * 100) : 0
-    return { total, qualified, approved, conversion }
+    const applied = leads.filter((l) => l.stage === 'approved').length
+    const conversion = total ? Math.round((applied / total) * 100) : 0
+    return { total, qualified, applied, conversion }
   }, [leads])
 
   const funnelSteps = useMemo(() => ([
     { label: 'Captured', value: leads.length },
     { label: 'Reached', value: leads.filter((l) => l.stage !== 'new').length },
     { label: 'Qualified', value: leads.filter((l) => QUALIFIED_PLUS.includes(l.stage)).length },
-    { label: 'In Direct Sales', value: leads.filter((l) => ['ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted', 'approved', 'rejected'].includes(l.stage)).length },
-    { label: 'Submitted to Credit', value: leads.filter((l) => ['credit_submitted', 'approved', 'rejected'].includes(l.stage)).length },
-    { label: 'Approved', value: leads.filter((l) => l.stage === 'approved').length },
+    { label: 'In Direct Sales', value: leads.filter((l) => ['ds_assigned', 'ds_in_progress', 'id_collected', 'approved'].includes(l.stage)).length },
+    { label: 'Applied', value: leads.filter((l) => l.stage === 'approved').length },
   ]), [leads])
 
   const statusCounts = useMemo(() => {
@@ -103,10 +102,10 @@ export default function CrmAnalytics({ team }: { team: 'telesales' | 'direct_sal
             <div className="sm:col-span-1 bg-[#5757e6] rounded-xl p-5 flex flex-col justify-center">
               <p className="text-xs text-white/80 mb-1">Conversion Rate</p>
               <p className="text-4xl font-bold text-white">{kpis.conversion}%</p>
-              <p className="text-[11px] text-white/70 mt-1">{agentFilter ? teamAgents.find((a) => a.id === agentFilter)?.full_name : 'all captured leads'} → approved</p>
+              <p className="text-[11px] text-white/70 mt-1">{agentFilter ? teamAgents.find((a) => a.id === agentFilter)?.full_name : 'all captured leads'} → applied</p>
             </div>
             <div className="sm:col-span-3 grid grid-cols-3 gap-4">
-              {[['Total Leads', kpis.total, '#111827'], ['Qualified', kpis.qualified, '#14B8A6'], ['Approved', kpis.approved, '#22C55E']].map(([label, val, color]) => (
+              {[['Total Leads', kpis.total, '#111827'], ['Qualified', kpis.qualified, '#14B8A6'], ['Applied', kpis.applied, '#22C55E']].map(([label, val, color]) => (
                 <div key={label as string} className="bg-white border border-[#e5e7eb] rounded-xl p-4 flex flex-col justify-center">
                   <p className="text-xs text-[#6B7280] mb-1">{label as string}</p>
                   <p className="text-2xl font-bold" style={{ color: color as string }}>{val as number}</p>

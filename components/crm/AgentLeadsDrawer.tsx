@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import type { CrmLead, CrmUser } from '@/lib/crm/types'
 import { listLeads, reassignWithComment } from '@/lib/crm/service'
-import { StagePill } from './ui/Pill'
+import { StagePill, stageLabel } from './ui/Pill'
 import { Skeleton } from './ui/Skeleton'
 import EmptyState from './ui/EmptyState'
 
@@ -67,7 +67,7 @@ export default function AgentLeadsDrawer({
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
               className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-xs rounded-lg px-2 py-1.5 focus:outline-none">
               <option value="">All stages ({leads.length})</option>
-              {stages.map((st) => <option key={st} value={st}>{st.replace(/_/g, ' ')} ({leads.filter((l) => l.stage === st).length})</option>)}
+              {stages.map((st) => <option key={st} value={st}>{stageLabel(st)} ({leads.filter((l) => l.stage === st).length})</option>)}
             </select>
           </div>
         )}

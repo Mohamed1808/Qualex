@@ -265,8 +265,6 @@ export type ActivityCategory =
   | 'qualify'
   | 'disposition'
   | 'kyc_update'
-  | 'credit_submit'
-  | 'credit_decision'
   | 'reminder'
   | 'reassignment'
   | 'assignment'
@@ -298,8 +296,6 @@ export type NotificationType =
   | 'new_unassigned_lead'
   | 'lead_auto_terminated'
   | 'qualified_to_ds'
-  | 'credit_submitted'
-  | 'credit_decision'
   | 'duplicate_detected'
 
 export interface AppNotification {

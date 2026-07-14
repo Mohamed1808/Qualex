@@ -34,8 +34,15 @@ export function stageColor(stage: string): string {
   return STAGE_COLORS[stage] ?? '#6B7280'
 }
 
+// "new" is the pipeline stage before anyone has touched the lead — shown as "Fresh"
+// everywhere so it always matches the Fresh status chip instead of reading as a
+// different, unrelated state.
+export function stageLabel(stage: string): string {
+  return stage === 'new' ? 'Fresh' : stage.replace(/_/g, ' ')
+}
+
 export function StagePill({ stage, className = '' }: { stage: string; className?: string }) {
-  return <Pill label={stage.replace(/_/g, ' ')} color={stageColor(stage)} className={className} />
+  return <Pill label={stageLabel(stage)} color={stageColor(stage)} className={className} />
 }
 
 const ROLE_COLORS: Record<string, string> = {

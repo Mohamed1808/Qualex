@@ -29,7 +29,6 @@ const NAV_SECTIONS: NavSection[] = [
       { href: '/crm/direct-sales/analytics', label: 'Direct Sales Analytics', icon: '📊', audiences: ['ds_sup'] },
       { href: '/crm/leads', label: 'Lead Management', icon: '❄️', audiences: ['ts_sup', 'ds_sup', 'admin'] },
       { href: '/crm/assign', label: 'Assign & Distribute', icon: '🎯', audiences: ['ts_sup', 'admin'] },
-      { href: '/crm/credit', label: 'Credit Decisions', icon: '🏦', audiences: ['ds_sup', 'admin'] },
       { href: '/crm/attendance', label: 'Attendance', icon: '✅', audiences: ['ts_sup', 'ds_sup', 'admin'] },
       { href: '/crm/duplicates', label: 'Duplicates', icon: '🔁', audiences: ['ts_sup', 'ds_sup', 'admin'] },
       { href: '/crm/activity', label: 'Activity Log', icon: '🕒', audiences: ['ts_sup', 'ds_sup', 'admin'] },

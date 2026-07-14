@@ -8,6 +8,7 @@ import { useSession } from '@/lib/crm/session'
 import PageHeader from './ui/PageHeader'
 import { CardSkeleton } from './ui/Skeleton'
 import EmptyState from './ui/EmptyState'
+import { stageLabel } from './ui/Pill'
 
 export default function DuplicatesView() {
   const { user } = useSession()
@@ -63,7 +64,7 @@ export default function DuplicatesView() {
             {group.map((l) => (
               <div key={l.id} className="flex items-center justify-between text-xs bg-[#f3f4f6] rounded-lg px-3 py-2">
                 <span className="text-[#111827]">{l.name}</span>
-                <span className="text-[#4B5563] capitalize">{l.stage.replace(/_/g, ' ')}</span>
+                <span className="text-[#4B5563] capitalize">{stageLabel(l.stage)}</span>
                 <span className="text-[#6B7280]">{new Date(l.created_at).toLocaleDateString('en-CA')}</span>
               </div>
             ))}
@@ -83,7 +84,7 @@ export default function DuplicatesView() {
                     onChange={() => setMerging({ ...merging, survivorId: l.id })} className="accent-[#5757e6]" />
                   <span className="flex-1">
                     <span className="text-[#111827] font-medium block">{l.name}</span>
-                    <span className="text-[#6B7280] capitalize">{l.stage.replace(/_/g, ' ')} · created {new Date(l.created_at).toLocaleDateString('en-CA')}</span>
+                    <span className="text-[#6B7280] capitalize">{stageLabel(l.stage)} · created {new Date(l.created_at).toLocaleDateString('en-CA')}</span>
                   </span>
                 </label>
               ))}

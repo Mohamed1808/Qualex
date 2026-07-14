@@ -218,10 +218,11 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
   function downloadTemplate() {
     const csv = Papa.unparse({
       // National ID is intentionally excluded — telesales collects it during KYC, not at import time.
-      fields: ['name', 'phone', 'source', 'campaign'],
+      // Project must match an existing project's name exactly (case-insensitive); leave blank for none.
+      fields: ['name', 'phone', 'source', 'campaign', 'project'],
       data: [
-        ['Ahmed Mostafa', '01012345678', 'call_center', 'Summer 2025'],
-        ['Mona Ibrahim', '01198765432', 'facebook', 'Ramadan Offer'],
+        ['Ahmed Mostafa', '01012345678', 'call_center', 'Summer 2025', 'Alexandria'],
+        ['Mona Ibrahim', '01198765432', 'facebook', 'Ramadan Offer', 'Palmhills (Alexandria)'],
       ],
     })
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
@@ -239,11 +240,13 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
         const rows = (res.data as Record<string, string>[])
           .map((r) => {
             const rawCh = (r.source || r.Source || r.channel || r.Channel || '').toLowerCase().replace(/[\s-]/g, '_')
-            const ch = (CHANNELS as string[]).includes(rawCh) ? (rawCh as LeadChannel) : channel
+            const ch = (CHANNELS as string[]).includes(rawCh) ? (rawCh as LeadChannel) : 'call_center'
+            const rawProject = (r.project || r.Project || '').trim().toLowerCase()
+            const matchedProject = rawProject ? projects.find((p) => p.name.trim().toLowerCase() === rawProject) : undefined
             return {
               name: r.name || r.Name || '', phone: r.phone || r.Phone || r.mobile || '',
               channel: ch, campaign: r.campaign || r.Campaign || null,
-              project_id: projectId || null,
+              project_id: matchedProject?.id ?? null,
               status_id: defaultStatus, assigned_user_id: null, expire_note: null,
             }
           })
@@ -266,23 +269,22 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-3">
-        <div>
-          <label className={lbl}>Project</label>
-          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={sel}>
-            <option value="">No project</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className={lbl}>Source</label>
-          <select value={channel} onChange={(e) => setChannel(e.target.value as LeadChannel)} className={sel}>
-            {CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_LABELS[c]}</option>)}
-          </select>
-        </div>
-      </div>
-
       {mode === 'manual' ? (
         <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={lbl}>Project</label>
+              <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={sel}>
+                <option value="">No project</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={lbl}>Source</label>
+              <select value={channel} onChange={(e) => setChannel(e.target.value as LeadChannel)} className={sel}>
+                {CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_LABELS[c]}</option>)}
+              </select>
+            </div>
+          </div>
           <div>
             <label className={lbl}>Name</label>
             <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => setTouched(true)} className={errCls(sel, !!nameError)} />
@@ -298,8 +300,9 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
         </div>
       ) : (
         <div>
-          <p className="text-xs text-[#4B5563] mb-1">Upload a CSV with <span className="text-[#111827] font-mono">name, phone</span> columns (optional <span className="font-mono">source, campaign</span>). Rows use the source above unless a <span className="font-mono">source</span> column is present. National ID is collected by telesales during KYC, not at import.</p>
-          <p className="text-[11px] text-[#6B7280] mb-3">Valid <span className="font-mono">source</span> values: <span className="font-mono">{CHANNELS.join(', ')}</span></p>
+          <p className="text-xs text-[#4B5563] mb-1">Upload a CSV with <span className="text-[#111827] font-mono">name, phone</span> columns (optional <span className="font-mono">source, campaign, project</span>). Each row&apos;s own source, campaign and project are used — nothing is picked in this panel.</p>
+          <p className="text-[11px] text-[#6B7280] mb-1">Valid <span className="font-mono">source</span> values: <span className="font-mono">{CHANNELS.join(', ')}</span></p>
+          <p className="text-[11px] text-[#6B7280] mb-3"><span className="font-mono">project</span> must match an existing project&apos;s name exactly (case-insensitive); leave blank for none. National ID is collected by telesales during KYC, not at import.</p>
 
           <button onClick={downloadTemplate} type="button"
             className="w-full mb-3 flex items-center justify-center gap-2 border border-[#5757e6]/30 bg-[#5757e6]/5 hover:bg-[#5757e6]/10 text-[#5757e6] text-sm font-medium rounded-lg px-4 py-2.5 transition-colors">

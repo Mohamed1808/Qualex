@@ -12,7 +12,7 @@ import { useSession } from '@/lib/crm/session'
 import LeadWorkDrawer from './LeadWorkDrawer'
 import LeadHistoryDrawer from './LeadHistoryDrawer'
 import PageHeader from './ui/PageHeader'
-import { StagePill, stageColor, Pill } from './ui/Pill'
+import { StagePill, stageColor, stageLabel, Pill } from './ui/Pill'
 import { TableSkeleton } from './ui/Skeleton'
 import EmptyState from './ui/EmptyState'
 import { DensityToggle, useDensity } from './ui/useDensity'
@@ -23,7 +23,7 @@ import type { Project } from '@/lib/crm/types'
 // appears in both, because a lead unqualified by either side is relevant to both.
 const STAGES: Record<'telesales' | 'direct_sales', LeadStage[]> = {
   telesales: ['new', 'telesales_assigned', 'telesales_in_progress', 'unqualified', 'unreachable', 'retired', 'terminated'],
-  direct_sales: ['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted', 'approved', 'rejected', 'unqualified'],
+  direct_sales: ['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'approved', 'unqualified'],
 }
 
 export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_sales' }) {
@@ -142,7 +142,7 @@ export default function SupervisorQueue({ team }: { team: 'telesales' | 'direct_
               stageFilter === st ? 'ring-1' : 'border-[#e5e7eb] text-[#4B5563] hover:border-[#d1d5db]'
             }`}
             style={stageFilter === st ? { borderColor: stageColor(st), color: stageColor(st), backgroundColor: `${stageColor(st)}10` } : undefined}>
-            {st.replace(/_/g, ' ')} <span className="font-bold text-[#111827]">{counts[st] ?? 0}</span>
+            {stageLabel(st)} <span className="font-bold text-[#111827]">{counts[st] ?? 0}</span>
           </button>
         ))}
       </div>

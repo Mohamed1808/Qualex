@@ -25,8 +25,9 @@ import type {
   AppNotification, NotificationType, UserRole,
 } from './types'
 
-// v11: cleared all seed leads (fresh start) — bump to reseed.
-const KEY = 'qualex-crm-v11'
+// v12: pruned status set to admin's exact list + added Applied; removed Credit
+// Decisions flow (DS happy path now marks "Applied" directly) — bump to reseed.
+const KEY = 'qualex-crm-v12'
 /** Same-tab live-update signal for the notification bell (cross-tab updates arrive via the native `storage` event). */
 export const NOTIFICATIONS_EVENT = 'qualex-notifications-updated'
 
@@ -405,7 +406,7 @@ const STATUS_QUALIFIED = 'st-qualified'
 const STATUS_UNQUALIFIED = 'st-unqualified'
 const STATUS_RETIRED = 'st-retired'
 const STATUS_TERMINATED = 'st-terminated'
-const STATUS_CREDIT_APPROVED = 'st-creditapproved'
+const STATUS_APPLIED = 'st-applied'
 
 const CATEGORY_STATUS: Record<import('./types').AnsweredCategory, string> = {
   pending_id: STATUS_WAITING_ID,
@@ -539,7 +540,7 @@ export async function runNotificationSweep(): Promise<void> {
 
   if (changed) write(s)
 }
-const DS_STAGES_FOR_SWEEP = ['ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted']
+const DS_STAGES_FOR_SWEEP = ['ds_assigned', 'ds_in_progress', 'id_collected']
 
 /** Supervisor assigns a lead to a telesales agent. */
 export async function assignTelesales(leadId: string, agentId: string, actor: string): Promise<void> {
@@ -884,21 +885,21 @@ export const checkOut = (userId: string) => mutateAttendance(userId, (a) => { a.
 export const startBreak = (userId: string) => mutateAttendance(userId, (a) => { a.on_break = true; a.break_log.push({ started_at: now(), ended_at: null }) }, 'Started break')
 export const endBreak = (userId: string) => mutateAttendance(userId, (a) => { a.on_break = false; const last = a.break_log[a.break_log.length - 1]; if (last && !last.ended_at) last.ended_at = now() }, 'Ended break')
 
-// ---- credit decision ----
-export async function recordCreditDecision(leadId: string, decision: 'approved' | 'rejected', note: string, actor: string, actorId?: string): Promise<void> {
+/**
+ * Direct Sales happy path: the customer confirmed they want the car and every
+ * required detail/document is in. No separate credit-decision step — this is
+ * the terminal success state for the DS flow.
+ */
+export async function markApplied(leadId: string, actor: string, actorId?: string): Promise<void> {
   const s = read()
   const leadForLog = s.leads.find((l) => l.id === leadId)
   patchLead(s, leadId, {
-    stage: decision, ds_disposition: decision === 'approved' ? 'qualified' : 'unqualified',
-    unqualification_reason: decision === 'rejected' ? (note || 'Credit rejected') : null,
-    status_id: autoStatus(s, decision === 'approved' ? STATUS_CREDIT_APPROVED : STATUS_UNQUALIFIED, leadForLog?.status_id ?? null),
+    stage: 'approved', ds_disposition: 'qualified',
+    status_id: autoStatus(s, STATUS_APPLIED, leadForLog?.status_id ?? null),
   })
-  logHistory(s, leadId, actor, 'status_change', `Credit ${decision}${note ? ` — ${note}` : ''}`)
+  logHistory(s, leadId, actor, 'status_change', 'Marked Applied — customer confirmed purchase')
   const actorInfo = resolveUserById(s, actorId)
-  logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'credit_decision', action: `Credit ${decision}${note ? ` — ${note}` : ''}`, leadId, leadName: leadForLog?.name })
-  if (leadForLog?.assigned_direct_sales_agent) {
-    notifyUser(s, leadForLog.assigned_direct_sales_agent, 'credit_decision', `Credit ${decision}`, `${leadForLog.name} was ${decision}${note ? ` — ${note}` : ''}.`, leadId, leadForLog.name, '/crm/sales?lead=' + leadId)
-  }
+  logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'kyc_update', action: 'Marked Applied — customer confirmed purchase', leadId, leadName: leadForLog?.name })
   write(s); return delay(undefined)
 }
 
@@ -910,12 +911,7 @@ export async function updateLead(leadId: string, patch: Partial<CrmLead>, actor?
   if (actor && detail) {
     logHistory(s, leadId, actor, 'status_change', detail)
     const actorInfo = resolveUserById(s, actorId)
-    const category: ActivityCategory = patch.stage === 'credit_submitted' ? 'credit_submit' : 'kyc_update'
-    logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category, action: detail, leadId, leadName: leadForLog?.name })
-    if (patch.stage === 'credit_submitted') {
-      notifyRole(s, 'admin', 'credit_submitted', 'Credit decision needed', `${leadForLog?.name ?? 'A lead'} was submitted to Credit and is awaiting a decision.`, leadId, leadForLog?.name, '/crm/credit')
-      notifyRole(s, 'direct_sales_supervisor', 'credit_submitted', 'Submitted to Credit', `${leadForLog?.name ?? 'A lead'} was submitted to Credit by your team.`, leadId, leadForLog?.name, '/crm/credit')
-    }
+    logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'kyc_update', action: detail, leadId, leadName: leadForLog?.name })
   }
   write(s); return delay(undefined)
 }

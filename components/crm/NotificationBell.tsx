@@ -14,8 +14,6 @@ const TYPE_ICON: Record<AppNotification['type'], string> = {
   new_unassigned_lead: '❄️',
   lead_auto_terminated: '⛔',
   qualified_to_ds: '✅',
-  credit_submitted: '🏦',
-  credit_decision: '📋',
   duplicate_detected: '👥',
 }
 

@@ -12,7 +12,7 @@ const TYPE_ICON: Record<LeadHistoryEntry['type'], string> = {
 
 const ACTIVITY_ICON: Record<ActivityCategory, string> = {
   attendance: '🕒', call_attempt: '📞', qualify: '✅', disposition: '🏷️',
-  kyc_update: '📝', credit_submit: '🏦', credit_decision: '📋', reminder: '⏰',
+  kyc_update: '📝', reminder: '⏰',
   reassignment: '🔁', assignment: '🎯', comment: '💬',
 }
 
