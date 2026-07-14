@@ -5,12 +5,17 @@
 
 export type StatusCategory = 'open' | 'won' | 'lost'
 
+// Which department(s) a status is visible to. Lets the admin keep telesales and
+// direct sales status lists independent (a status can belong to just one, or both).
+export type DepartmentScope = 'telesales' | 'direct_sales' | 'both'
+
 export interface LeadStatus {
   id: string
   name: string
   color: string // hex
   sort_order: number
   category: StatusCategory
+  department_scope: DepartmentScope
   is_default: boolean
   is_active: boolean
 }

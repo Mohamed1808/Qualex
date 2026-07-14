@@ -25,8 +25,8 @@ import type {
   AppNotification, NotificationType, UserRole,
 } from './types'
 
-// v9: added pipeline-outcome statuses (Qualified/Unqualified/Retired/…) — bump to reseed.
-const KEY = 'qualex-crm-v9'
+// v10: statuses are now department-scoped (telesales/direct_sales/both) — bump to reseed.
+const KEY = 'qualex-crm-v10'
 /** Same-tab live-update signal for the notification bell (cross-tab updates arrive via the native `storage` event). */
 export const NOTIFICATIONS_EVENT = 'qualex-notifications-updated'
 

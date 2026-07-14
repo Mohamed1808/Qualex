@@ -75,6 +75,14 @@ export default function SalesDashboard() {
   const statusById = useMemo(() => Object.fromEntries(statuses.map((s) => [s.id, s])), [statuses])
   const projectById = useMemo(() => Object.fromEntries(projects.map((p) => [p.id, p])), [projects])
 
+  // Statuses are department-scoped: an agent only sees the ones the admin marked
+  // for their own department (or "both"). Managers browsing this view see everything.
+  const department = user.role === 'telesales_agent' ? 'telesales' : user.role === 'direct_sales_agent' ? 'direct_sales' : null
+  const visibleStatuses = useMemo(
+    () => department ? statuses.filter((s) => s.department_scope === department || s.department_scope === 'both') : statuses,
+    [statuses, department],
+  )
+
   // Statistics: counts per status across the (unfiltered by search) full set
   const [allLeads, setAllLeads] = useState<CrmLead[]>([])
   useEffect(() => { listLeads(scope).then(setAllLeads) }, [user.id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -102,7 +110,7 @@ export default function SalesDashboard() {
         </button>
         {showStats && (
           <div className="px-5 pb-5 flex flex-wrap gap-2">
-            {statuses.filter((s) => s.is_active).map((s) => (
+            {visibleStatuses.filter((s) => s.is_active).map((s) => (
               <button
                 key={s.id}
                 onClick={() => setFilter((f) => ({ ...f, status_id: f.status_id === s.id ? undefined : s.id }))}
@@ -152,7 +160,7 @@ export default function SalesDashboard() {
                 onChange={(e) => setFilter((f) => ({ ...f, status_id: e.target.value || undefined }))}
                 className="w-full mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#5757e6]">
                 <option value="">All statuses</option>
-                {statuses.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                {visibleStatuses.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
             <div>

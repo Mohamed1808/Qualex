@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import type { LeadStatus, StatusCategory } from '@/lib/crm/types'
+import type { LeadStatus, StatusCategory, DepartmentScope } from '@/lib/crm/types'
 import { listStatuses, createStatus, updateStatus, deleteStatus, listLeads } from '@/lib/crm/service'
 import PageHeader from './ui/PageHeader'
 import { TableSkeleton } from './ui/Skeleton'
@@ -10,12 +10,19 @@ import EmptyState from './ui/EmptyState'
 
 const PALETTE = ['#5757e6', '#3B82F6', '#14B8A6', '#22C55E', '#F59E0B', '#F26161', '#A855F7', '#EC4899', '#6B7280', '#25D366']
 
+const SCOPE_LABELS: Record<DepartmentScope, string> = {
+  telesales: 'Telesales only',
+  direct_sales: 'Direct Sales only',
+  both: 'Both departments',
+}
+
 export default function StatusManager() {
   const [statuses, setStatuses] = useState<LeadStatus[]>([])
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
   const [color, setColor] = useState(PALETTE[0])
   const [category, setCategory] = useState<StatusCategory>('open')
+  const [scope, setScope] = useState<DepartmentScope>('both')
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<{ status: LeadStatus; usageCount: number } | null>(null)
 
@@ -30,17 +37,24 @@ export default function StatusManager() {
     if (!name.trim()) { toast.error('Enter a status name'); return }
     setSaving(true)
     await createStatus({
-      name: name.trim(), color, category, is_default: false, is_active: true,
+      name: name.trim(), color, category, department_scope: scope, is_default: false, is_active: true,
       sort_order: statuses.length + 1,
     })
     setSaving(false)
     setName('')
-    toast.success('Status added — now available in the sales portal')
+    setScope('both')
+    toast.success(`Status added — visible to ${SCOPE_LABELS[scope].toLowerCase()}`)
     reload()
   }
 
   async function toggle(s: LeadStatus) {
     await updateStatus(s.id, { is_active: !s.is_active })
+    reload()
+  }
+
+  async function changeScope(s: LeadStatus, department_scope: DepartmentScope) {
+    await updateStatus(s.id, { department_scope })
+    toast.success(`"${s.name}" is now visible to ${SCOPE_LABELS[department_scope].toLowerCase()}`)
     reload()
   }
 
@@ -69,7 +83,7 @@ export default function StatusManager() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
-      <PageHeader crumbs={[{ label: 'CRM', href: '/crm' }]} title="Lead Statuses" subtitle="Add or manage statuses. Changes reflect instantly in the sales portal." />
+      <PageHeader crumbs={[{ label: 'CRM', href: '/crm' }]} title="Lead Statuses" subtitle="Add or manage statuses. Assign each to Telesales, Direct Sales, or both — agents only see statuses scoped to their own department." />
 
       {/* Add */}
       <div className="bg-white border border-[#e5e7eb] rounded-xl p-5">
@@ -87,6 +101,15 @@ export default function StatusManager() {
               <option value="open">Open</option>
               <option value="won">Won</option>
               <option value="lost">Lost</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] text-[#6B7280] uppercase tracking-wide">Department</label>
+            <select value={scope} onChange={(e) => setScope(e.target.value as DepartmentScope)}
+              className="mt-1 bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-sm rounded-lg px-3 py-2 focus:outline-none">
+              <option value="both">Both departments</option>
+              <option value="telesales">Telesales only</option>
+              <option value="direct_sales">Direct Sales only</option>
             </select>
           </div>
           <div>
@@ -114,15 +137,16 @@ export default function StatusManager() {
               <th className="px-4 py-3 w-16">Order</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Category</th>
+              <th className="px-4 py-3">Department</th>
               <th className="px-4 py-3">State</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <TableSkeleton rows={5} cols={5} />
+              <TableSkeleton rows={5} cols={6} />
             ) : statuses.length === 0 ? (
-              <tr><td colSpan={5}><EmptyState icon="🏷️" title="No statuses yet" hint="Add your first status above." /></td></tr>
+              <tr><td colSpan={6}><EmptyState icon="🏷️" title="No statuses yet" hint="Add your first status above." /></td></tr>
             ) : statuses.map((s, i) => (
               <tr key={s.id} className="border-b border-[#e5e7eb] last:border-0 hover:bg-[#f3f4f6] transition-colors">
                 <td className="px-4 py-3">
@@ -139,6 +163,14 @@ export default function StatusManager() {
                   </span>
                 </td>
                 <td className="px-4 py-3 capitalize text-[#4B5563] text-xs">{s.category}</td>
+                <td className="px-4 py-3">
+                  <select value={s.department_scope} onChange={(e) => changeScope(s, e.target.value as DepartmentScope)}
+                    className="bg-[#f3f4f6] border border-[#e5e7eb] text-[#111827] text-xs rounded-lg px-2 py-1 focus:outline-none">
+                    <option value="both">Both departments</option>
+                    <option value="telesales">Telesales only</option>
+                    <option value="direct_sales">Direct Sales only</option>
+                  </select>
+                </td>
                 <td className="px-4 py-3">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${s.is_active ? 'text-[#22C55E] bg-[#22C55E]/15' : 'text-[#6B7280] bg-[#6B7280]/15'}`}>
                     {s.is_active ? 'Active' : 'Hidden'}
