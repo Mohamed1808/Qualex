@@ -25,8 +25,8 @@ import type {
   AppNotification, NotificationType, UserRole,
 } from './types'
 
-// v10: statuses are now department-scoped (telesales/direct_sales/both) — bump to reseed.
-const KEY = 'qualex-crm-v10'
+// v11: cleared all seed leads (fresh start) — bump to reseed.
+const KEY = 'qualex-crm-v11'
 /** Same-tab live-update signal for the notification bell (cross-tab updates arrive via the native `storage` event). */
 export const NOTIFICATIONS_EVENT = 'qualex-notifications-updated'
 

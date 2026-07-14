@@ -13,8 +13,6 @@ import type {
   LeadComment,
   LeadReminder,
   DistributionSchedule,
-  LeadChannel,
-  LeadStage,
 } from './types'
 
 export const SEED_STATUSES: LeadStatus[] = [
@@ -79,51 +77,14 @@ export const SEED_USERS: CrmUser[] = [
   { id: 'u-omar', full_name: 'Omar Khaled', email: 'omar@drivefinance.eg', role: 'direct_sales_agent', title: 'Sales Agent', team_id: 'tm-coast', is_active: true, created_at: '2024-01-06T09:00:00Z', history: [{ at: '2024-01-06T09:00:00Z', action: 'Account created' }] },
 ]
 
-const NAMES = ['Khaled Adel', 'Mona Sherif', 'Tarek Fouad', 'Yasmin Saad', 'Hossam Gamal', 'Dina Magdy', 'Sherif Nabil', 'Amira Lotfi', 'Walid Samir', 'Rania Adel', 'Ahmed Sobhy', 'Heba Kamal', 'Mostafa Ezz', 'Laila Hany', 'Omar Fathy', 'Salma Reda', 'Karim Wael', 'Nada Sami', 'Tamer Ashraf', 'Ghada Nasr']
-const CHANNELS: LeadChannel[] = ['call_center', 'facebook', 'instagram', 'website', 'app', 'whatsapp', 'walkin']
 export const SEED_CAMPAIGNS = ['Summer 2025', 'Ramadan Offer', 'North Coast Push', 'Retargeting Q3', 'New Alamein Launch']
-const PROJECT_IDS = SEED_PROJECTS.map((p) => p.id)
-const TS_AGENTS = ['u-ahmed', 'u-bahr']
 
 function daysAgo(n: number): string {
   const d = new Date()
   d.setDate(d.getDate() - n)
   return d.toISOString()
 }
-function hoursFromNow(h: number): string {
-  return new Date(Date.now() + h * 3600_000).toISOString()
-}
 
-const STAGE_PLAN: LeadStage[] = [
-  'new', 'telesales_assigned', 'telesales_in_progress', 'qualified', 'ds_assigned',
-  'ds_in_progress', 'id_collected', 'credit_submitted', 'approved', 'rejected',
-  'unqualified', 'unreachable', 'new', 'telesales_assigned', 'qualified',
-  'ds_assigned', 'id_collected', 'approved', 'telesales_in_progress', 'new',
-]
-
-const DS_STAGES: LeadStage[] = ['ds_assigned', 'ds_in_progress', 'id_collected', 'credit_submitted']
-const QUALIFIED_PLUS: LeadStage[] = ['qualified', ...DS_STAGES, 'approved', 'rejected']
-
-// Seed the sub-status chip from the pipeline stage so the demo matches the
-// live behaviour (status is action-driven, see service.ts auto-status mapping).
-const STATUS_FOR_STAGE: Record<LeadStage, string> = {
-  new: 'st-fresh',
-  telesales_assigned: 'st-fresh',
-  telesales_in_progress: 'st-followup',
-  qualified: 'st-qualified',
-  ds_assigned: 'st-fresh',
-  ds_in_progress: 'st-followup',
-  id_collected: 'st-waiting',
-  credit_submitted: 'st-ongoing',
-  approved: 'st-creditapproved',
-  rejected: 'st-unqualified',
-  unqualified: 'st-unqualified',
-  unreachable: 'st-noanswer',
-  retired: 'st-retired',
-  terminated: 'st-terminated',
-}
-
-/** Build a fully-populated lead with pipeline defaults. */
 /** Format a sequential entry number as a padded, human-readable ID (DF-00001). */
 export function formatEntryId(n: number): string {
   return `DF-${String(n).padStart(5, '0')}`
@@ -149,52 +110,9 @@ export function makeLead(partial: Partial<CrmLead> & { name: string; phone: stri
   }
 }
 
-export const SEED_LEADS: CrmLead[] = NAMES.map((name, i) => {
-  const stage = STAGE_PLAN[i % STAGE_PLAN.length]
-  const tsAgent = TS_AGENTS[i % TS_AGENTS.length]
-  const inDS = DS_STAGES.includes(stage)
-  const dsTouched = inDS || stage === 'approved' || stage === 'rejected'
-  const qualified = QUALIFIED_PLUS.includes(stage)
-  const owner = dsTouched ? 'u-omar' : stage === 'new' ? null : tsAgent
-
-  return makeLead({
-    id: `ld-${i + 1}`,
-    entry_id: formatEntryId(i + 1),
-    name,
-    phone: `0127${String(6660000 + i * 37).padStart(7, '0')}`,
-    facebook_url: i % 3 === 0 ? `https://facebook.com/${name.split(' ')[0].toLowerCase()}` : null,
-    channel: CHANNELS[i % CHANNELS.length],
-    campaign: SEED_CAMPAIGNS[i % SEED_CAMPAIGNS.length],
-    project_id: PROJECT_IDS[i % PROJECT_IDS.length],
-    status_id: STATUS_FOR_STAGE[stage],
-    assigned_user_id: owner,
-    stage,
-    assigned_telesales_agent: stage === 'new' ? null : tsAgent,
-    assigned_direct_sales_agent: dsTouched ? 'u-omar' : null,
-    tele_disposition: qualified ? 'qualified' : stage === 'unqualified' ? 'unqualified' : stage === 'unreachable' ? 'no_answer' : null,
-    ds_disposition: stage === 'approved' ? 'qualified' : stage === 'rejected' ? 'unqualified' : null,
-    telesales_qualified_at: qualified ? daysAgo(i) : null,
-    direct_sales_assigned_at: dsTouched ? daysAgo(i > 1 ? i - 1 : 0) : null,
-    tele_sla_due_at: ['telesales_assigned', 'telesales_in_progress'].includes(stage) ? hoursFromNow(i % 3 === 0 ? -2 : 3) : null,
-    tele_sla_breached: stage === 'telesales_in_progress' && i % 3 === 0,
-    ds_sla_due_at: inDS ? hoursFromNow(i % 4 === 0 ? -1 : 6) : null,
-    ds_sla_breached: inDS && i % 4 === 0,
-    salary_bracket: qualified ? ['10000_20000', '20000_plus', '5000_10000'][i % 3] : null,
-    down_payment_bracket: qualified ? ['20_30pct', '30_50pct'][i % 2] : null,
-    financing_program: qualified ? (['new_car', 'used_car', 'collateral'] as const)[i % 3] : null,
-    car_source: qualified ? (['dealer', 'individual', 'distributor'] as const)[i % 3] : null,
-    occupation: qualified ? ['Engineer', 'Doctor', 'Accountant', 'Teacher'][i % 4] : null,
-    customer_national_id: qualified ? `2${String(88010100000 + i * 137).slice(0, 13)}` : null,
-    requested_car_brand: ['Toyota', 'Hyundai', 'Kia', 'Nissan'][i % 4],
-    requested_car_model: ['Corolla', 'Tucson', 'Sportage', 'Sunny'][i % 4],
-    requested_car_year: 2022 + (i % 3),
-    expected_program: inDS ? (['D2', 'D3', 'U2', 'U4', 'LC1', 'LC5'] as const)[i % 6] : null,
-    unqualification_reason: stage === 'unqualified' ? 'Income below threshold' : stage === 'rejected' ? 'Credit rejected by bank' : null,
-    created_at: daysAgo(i),
-    updated_at: daysAgo(i > 3 ? i - 2 : 0),
-    expire_note: i % 5 === 0 ? 'You Locked It' : null,
-  })
-})
+// Cleared on request — the demo now starts with no leads. Import a batch via
+// Lead Management → Add Leads → Import to populate it.
+export const SEED_LEADS: CrmLead[] = []
 
 // build an ISO timestamp for HH:MM today
 function todayAt(h: number, m: number): string {
@@ -230,15 +148,9 @@ export const SEED_ATTENDANCE: import('./types').Attendance[] = [
   },
 ]
 
-export const SEED_CALL_ATTEMPTS: import('./types').CallAttempt[] = [
-  { id: 'ca-1', lead_id: 'ld-3', agent_id: 'u-ahmed', agent_name: 'Ahmed Hassan', stage: 'telesales', attempt_number: 1, outcome: 'no_answer', answered_category: null, callback_at: null, notes: 'No answer, will retry', called_at: daysAgo(1) },
-]
-
-export const SEED_COMMENTS: LeadComment[] = [
-  { id: 'cm-1', lead_id: 'ld-1', author_id: 'u-ahmed', author_name: 'Ahmed Hassan', body: 'Called the customer, interested in Alexandria villas. Asked to call back next week.', created_at: daysAgo(2) },
-  { id: 'cm-2', lead_id: 'ld-1', author_id: 'u-ahmed', author_name: 'Ahmed Hassan', body: 'Sent project brochure over WhatsApp.', created_at: daysAgo(1) },
-  { id: 'cm-3', lead_id: 'ld-2', author_id: 'u-bahr', author_name: 'Mohamed Bahr', body: 'No answer on first attempt.', created_at: daysAgo(1) },
-]
+// No seed leads, so nothing to attach these to for now.
+export const SEED_CALL_ATTEMPTS: import('./types').CallAttempt[] = []
+export const SEED_COMMENTS: LeadComment[] = []
 
 export const SEED_REMINDERS: LeadReminder[] = []
 
