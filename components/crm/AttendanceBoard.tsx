@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Attendance, CrmUser } from '@/lib/crm/types'
 import { listAttendance, listUsers } from '@/lib/crm/service'
+import { useSession } from '@/lib/crm/session'
 import PageHeader from './ui/PageHeader'
 import { CardSkeleton } from './ui/Skeleton'
 import EmptyState from './ui/EmptyState'
@@ -31,6 +32,7 @@ interface AgentDay {
 }
 
 export default function AttendanceBoard() {
+  const { user } = useSession()
   const [att, setAtt] = useState<Attendance[]>([])
   const [users, setUsers] = useState<CrmUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,7 +42,12 @@ export default function AttendanceBoard() {
     Promise.all([listAttendance(), listUsers()]).then(([a, u]) => { setAtt(a); setUsers(u); setLoading(false) })
   }, [])
 
-  const agents = users.filter((u) => u.role.includes('agent'))
+  // A supervisor only sees the agents under their own department; admin sees everyone.
+  const scopedAgentRole =
+    user.role === 'telesales_supervisor' ? 'telesales_agent'
+    : user.role === 'direct_sales_supervisor' ? 'direct_sales_agent'
+    : null
+  const agents = users.filter((u) => scopedAgentRole ? u.role === scopedAgentRole : u.role.includes('agent'))
   const byUser = useMemo(() => Object.fromEntries(att.map((a) => [a.user_id, a])), [att])
 
   const rows: AgentDay[] = agents.map((u) => {

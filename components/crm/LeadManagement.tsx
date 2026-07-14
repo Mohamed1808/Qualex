@@ -217,10 +217,11 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
 
   function downloadTemplate() {
     const csv = Papa.unparse({
-      fields: ['name', 'phone', 'source', 'campaign', 'national_id'],
+      // National ID is intentionally excluded — telesales collects it during KYC, not at import time.
+      fields: ['name', 'phone', 'source', 'campaign'],
       data: [
-        ['Ahmed Mostafa', '01012345678', 'call_center', 'Summer 2025', '29001011234567'],
-        ['Mona Ibrahim', '01198765432', 'facebook', 'Ramadan Offer', ''],
+        ['Ahmed Mostafa', '01012345678', 'call_center', 'Summer 2025'],
+        ['Mona Ibrahim', '01198765432', 'facebook', 'Ramadan Offer'],
       ],
     })
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
@@ -242,7 +243,6 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
             return {
               name: r.name || r.Name || '', phone: r.phone || r.Phone || r.mobile || '',
               channel: ch, campaign: r.campaign || r.Campaign || null,
-              customer_national_id: r.national_id || r.nationalId || r.NationalID || null,
               project_id: projectId || null,
               status_id: defaultStatus, assigned_user_id: null, expire_note: null,
             }
@@ -298,7 +298,7 @@ function AddLeads({ projects, statuses, onClose, onDone }: { projects: Project[]
         </div>
       ) : (
         <div>
-          <p className="text-xs text-[#4B5563] mb-1">Upload a CSV with <span className="text-[#111827] font-mono">name, phone</span> columns (optional <span className="font-mono">source, campaign, national_id</span>). Rows use the source above unless a <span className="font-mono">source</span> column is present.</p>
+          <p className="text-xs text-[#4B5563] mb-1">Upload a CSV with <span className="text-[#111827] font-mono">name, phone</span> columns (optional <span className="font-mono">source, campaign</span>). Rows use the source above unless a <span className="font-mono">source</span> column is present. National ID is collected by telesales during KYC, not at import.</p>
           <p className="text-[11px] text-[#6B7280] mb-3">Valid <span className="font-mono">source</span> values: <span className="font-mono">{CHANNELS.join(', ')}</span></p>
 
           <button onClick={downloadTemplate} type="button"
