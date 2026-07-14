@@ -24,7 +24,7 @@ export const SEED_STATUSES: LeadStatus[] = [
   { id: 'st-request', name: 'Request', color: '#8B5CF6', sort_order: 5, category: 'open', department_scope: 'both', is_default: false, is_active: true },
   { id: 'st-notinterested', name: 'Not interested', color: '#F26161', sort_order: 6, category: 'lost', department_scope: 'both', is_default: false, is_active: true },
   { id: 'st-waitingid', name: 'Waiting for ID', color: '#7C3AED', sort_order: 7, category: 'open', department_scope: 'both', is_default: false, is_active: true },
-  { id: 'st-qualified', name: 'Qualified', color: '#10B981', sort_order: 8, category: 'open', department_scope: 'telesales', is_default: false, is_active: true },
+  { id: 'st-qualified', name: 'Qualified', color: '#10B981', sort_order: 8, category: 'open', department_scope: 'both', is_default: false, is_active: true },
   { id: 'st-unqualified', name: 'Unqualified', color: '#EF4444', sort_order: 9, category: 'lost', department_scope: 'both', is_default: false, is_active: true },
   { id: 'st-retired', name: 'Retired', color: '#9CA3AF', sort_order: 10, category: 'lost', department_scope: 'both', is_default: false, is_active: true },
   { id: 'st-terminated', name: 'Terminated', color: '#DC2626', sort_order: 11, category: 'lost', department_scope: 'both', is_default: false, is_active: true },
@@ -85,7 +85,8 @@ export function makeLead(partial: Partial<CrmLead> & { name: string; phone: stri
   return {
     id: partial.id ?? Math.random().toString(36).slice(2, 10),
     entry_id: partial.entry_id ?? '',
-    facebook_url: null, channel: 'call_center', campaign: null, project_id: null, status_id: null,
+    facebook_url: null, channel: 'call_center', campaign: null, project_id: null,
+    status_id: null, telesales_status_id: null, direct_sales_status_id: null,
     assigned_user_id: null, expire_note: null,
     stage: 'new', assigned_telesales_agent: null, assigned_direct_sales_agent: null,
     tele_disposition: null, ds_disposition: null, telesales_qualified_at: null, direct_sales_assigned_at: null,

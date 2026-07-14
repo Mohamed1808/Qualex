@@ -58,11 +58,23 @@ export default function CrmAnalytics({ team }: { team: 'telesales' | 'direct_sal
     { label: 'Applied', value: leads.filter((l) => l.stage === 'approved').length },
   ]), [leads])
 
+  // Count each lead by THIS department's own status only, so telesales never
+  // shows direct-sales statuses and vice versa (a lead that has been through
+  // both is counted under each department's respective status).
   const statusCounts = useMemo(() => {
     const c: Record<string, number> = {}
-    for (const l of leads) if (l.status_id) c[l.status_id] = (c[l.status_id] ?? 0) + 1
+    for (const l of leads) {
+      const sid = team === 'telesales' ? l.telesales_status_id : l.direct_sales_status_id
+      if (sid) c[sid] = (c[sid] ?? 0) + 1
+    }
     return c
-  }, [leads])
+  }, [leads, team])
+
+  // Only show statuses that belong to this department (or both).
+  const deptStatuses = useMemo(
+    () => statuses.filter((s) => s.department_scope === team || s.department_scope === 'both'),
+    [statuses, team],
+  )
 
   // Leaderboard always over the full team (date-filtered), independent of agentFilter selection
   const dateLeads = useMemo(() => allLeads.filter((l) => (!from || l.created_at >= from) && (!to || l.created_at <= `${to}T23:59:59`)), [allLeads, from, to])
@@ -122,7 +134,7 @@ export default function CrmAnalytics({ team }: { team: 'telesales' | 'direct_sal
             <div className="bg-white border border-[#e5e7eb] rounded-xl p-5">
               <h3 className="text-sm font-semibold text-[#111827] mb-4">Status Distribution</h3>
               <div className="flex flex-wrap gap-2">
-                {statuses.map((s) => (
+                {deptStatuses.map((s) => (
                   <div key={s.id} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: `${s.color}12` }}>
                     <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
                     <span className="text-xs text-[#374151]">{s.name}</span>

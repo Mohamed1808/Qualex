@@ -25,9 +25,9 @@ import type {
   AppNotification, NotificationType, UserRole,
 } from './types'
 
-// v12: pruned status set to admin's exact list + added Applied; removed Credit
-// Decisions flow (DS happy path now marks "Applied" directly) — bump to reseed.
-const KEY = 'qualex-crm-v12'
+// v13: statuses are now department-independent (separate telesales/direct-sales
+// status per lead; Qualified is the shared handoff) — bump to reseed.
+const KEY = 'qualex-crm-v13'
 /** Same-tab live-update signal for the notification bell (cross-tab updates arrive via the native `storage` event). */
 export const NOTIFICATIONS_EVENT = 'qualex-notifications-updated'
 
@@ -232,7 +232,7 @@ function detectDuplicate(s: Store, lead: CrmLead) {
 export async function createLead(input: Partial<CrmLead> & { name: string; phone: string }): Promise<CrmLead> {
   const s = read()
   // New leads always start Fresh (status is agent-action-driven from here on).
-  const lead = makeLead({ ...input, id: uid(), entry_id: nextEntryId(s), status_id: STATUS_FRESH, created_at: now(), updated_at: now() })
+  const lead = makeLead({ ...input, id: uid(), entry_id: nextEntryId(s), status_id: STATUS_FRESH, telesales_status_id: STATUS_FRESH, created_at: now(), updated_at: now() })
   s.leads.push(lead)
   s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: 'System', type: 'created', detail: 'Lead created' })
   detectDuplicate(s, lead)
@@ -248,7 +248,7 @@ export async function importLeads(rows: (Partial<CrmLead> & { name: string; phon
   const s = read()
   let duplicates = 0
   for (const row of rows) {
-    const lead = makeLead({ ...row, id: uid(), entry_id: nextEntryId(s), status_id: STATUS_FRESH, created_at: now(), updated_at: now() })
+    const lead = makeLead({ ...row, id: uid(), entry_id: nextEntryId(s), status_id: STATUS_FRESH, telesales_status_id: STATUS_FRESH, created_at: now(), updated_at: now() })
     s.leads.push(lead)
     s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: 'Import', type: 'created', detail: 'Imported' })
     detectDuplicate(s, lead)
@@ -421,6 +421,19 @@ function autoStatus(s: Store, statusId: string, current: string | null): string 
   return s.statuses.some((x) => x.id === statusId) ? statusId : current
 }
 
+/**
+ * Build a patch that sets ONE department's status (and mirrors it into the
+ * shared `status_id` used by neutral/admin views). Telesales actions never
+ * touch the direct-sales status and vice versa, so the two stay independent.
+ */
+function statusPatch(s: Store, lead: CrmLead | undefined, dept: CallStage, statusId: string): Partial<CrmLead> {
+  const cur = dept === 'telesales' ? lead?.telesales_status_id : lead?.direct_sales_status_id
+  const resolved = autoStatus(s, statusId, cur ?? null)
+  return dept === 'telesales'
+    ? { telesales_status_id: resolved, status_id: resolved }
+    : { direct_sales_status_id: resolved, status_id: resolved }
+}
+
 function patchLead(s: Store, leadId: string, patch: Partial<CrmLead>) {
   s.leads = s.leads.map((l) => (l.id === leadId ? { ...l, ...patch, updated_at: now() } : l))
 }
@@ -546,10 +559,10 @@ const DS_STAGES_FOR_SWEEP = ['ds_assigned', 'ds_in_progress', 'id_collected']
 export async function assignTelesales(leadId: string, agentId: string, actor: string): Promise<void> {
   const s = read()
   const agent = s.users.find((u) => u.id === agentId)
-  patchLead(s, leadId, { stage: 'telesales_assigned', assigned_telesales_agent: agentId, assigned_user_id: agentId, status_id: STATUS_FRESH, tele_sla_due_at: slaDue(SLA_TELE_HOURS), tele_sla_breached: false })
+  const leadForLog = s.leads.find((l) => l.id === leadId)
+  patchLead(s, leadId, { stage: 'telesales_assigned', assigned_telesales_agent: agentId, assigned_user_id: agentId, ...statusPatch(s, leadForLog, 'telesales', STATUS_FRESH), tele_sla_due_at: slaDue(SLA_TELE_HOURS), tele_sla_breached: false })
   logHistory(s, leadId, actor, 'assignment', `Assigned to telesales ${agent?.full_name ?? agentId}`)
   const actorInfo = resolveUserByName(s, actor)
-  const leadForLog = s.leads.find((l) => l.id === leadId)
   logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'assignment', action: `Assigned to telesales ${agent?.full_name ?? agentId}`, leadId, leadName: leadForLog?.name })
   notifyUser(s, agentId, 'lead_assigned', 'New lead assigned', `${leadForLog?.name ?? 'A lead'} has been assigned to you.`, leadId, leadForLog?.name, '/crm/sales?lead=' + leadId)
   write(s); return delay(undefined)
@@ -559,10 +572,12 @@ export async function assignTelesales(leadId: string, agentId: string, actor: st
 export async function assignDirectSales(leadId: string, agentId: string, actor: string): Promise<void> {
   const s = read()
   const agent = s.users.find((u) => u.id === agentId)
-  patchLead(s, leadId, { stage: 'ds_assigned', assigned_direct_sales_agent: agentId, assigned_user_id: agentId, status_id: STATUS_FRESH, direct_sales_assigned_at: now(), ds_sla_due_at: slaDue(SLA_DS_HOURS), ds_sla_breached: false })
+  const leadForLog = s.leads.find((l) => l.id === leadId)
+  // DS status stays "Qualified" (the handoff) until the DS agent acts — don't reset to Fresh.
+  const dsStatus = autoStatus(s, leadForLog?.direct_sales_status_id ?? STATUS_QUALIFIED, STATUS_QUALIFIED)
+  patchLead(s, leadId, { stage: 'ds_assigned', assigned_direct_sales_agent: agentId, assigned_user_id: agentId, direct_sales_status_id: dsStatus, status_id: dsStatus, direct_sales_assigned_at: now(), ds_sla_due_at: slaDue(SLA_DS_HOURS), ds_sla_breached: false })
   logHistory(s, leadId, actor, 'assignment', `Assigned to direct sales ${agent?.full_name ?? agentId}`)
   const actorInfo = resolveUserByName(s, actor)
-  const leadForLog = s.leads.find((l) => l.id === leadId)
   logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'assignment', action: `Assigned to direct sales ${agent?.full_name ?? agentId}`, leadId, leadName: leadForLog?.name })
   notifyUser(s, agentId, 'lead_assigned', 'New lead assigned', `${leadForLog?.name ?? 'A lead'} has been assigned to you.`, leadId, leadForLog?.name, '/crm/sales?lead=' + leadId)
   write(s); return delay(undefined)
@@ -581,7 +596,10 @@ export interface QualificationInput {
 export async function qualifyLead(leadId: string, qual: QualificationInput, actor: string, actorId?: string): Promise<void> {
   const s = read()
   const leadForLog = s.leads.find((l) => l.id === leadId)
-  patchLead(s, leadId, { ...qual, stage: 'qualified', tele_disposition: 'qualified', telesales_qualified_at: now(), assigned_user_id: null, status_id: autoStatus(s, STATUS_QUALIFIED, leadForLog?.status_id ?? null) })
+  // Qualified is the one shared handoff: set BOTH departments' statuses. Telesales
+  // freezes here; direct sales shows Qualified until a DS agent acts.
+  const qualified = autoStatus(s, STATUS_QUALIFIED, leadForLog?.status_id ?? null)
+  patchLead(s, leadId, { ...qual, stage: 'qualified', tele_disposition: 'qualified', telesales_qualified_at: now(), assigned_user_id: null, telesales_status_id: qualified, direct_sales_status_id: qualified, status_id: qualified })
   logHistory(s, leadId, actor, 'status_change', 'Qualified by telesales → sent to Direct Sales')
   const actorInfo = resolveUserById(s, actorId)
   logActivity(s, { userId: actorInfo.id, userName: actor, role: actorInfo.role, category: 'qualify', action: 'Qualified lead — sent to Direct Sales', leadId, leadName: leadForLog?.name })
@@ -616,7 +634,8 @@ export async function setDisposition(leadId: string, stage: CallStage, dispositi
     : disposition === 'retired' ? STATUS_RETIRED
     : disposition === 'terminated' ? STATUS_TERMINATED
     : null
-  if (dispStatus) patch.status_id = autoStatus(s, dispStatus, leadForLog?.status_id ?? null)
+  // Write the disposition into the acting department's status only.
+  if (dispStatus) Object.assign(patch, statusPatch(s, leadForLog, stage, dispStatus))
   patchLead(s, leadId, patch)
   if (to) logHistory(s, leadId, actor, 'status_change', `Disposition: ${disposition}${notes ? ` — ${notes}` : ''}`)
   const actorInfo = resolveUserById(s, actorId)
@@ -646,7 +665,7 @@ export async function logCallAttempt(
 
   // After 3 no-answers (each with its scheduled callback), a further no-answer terminates.
   if (streak >= 3) {
-    patchLead(s, leadId, { stage: 'terminated', callback_locked: true, next_callback_at: null, callback_notified: false, status_id: autoStatus(s, STATUS_TERMINATED, leadForLog?.status_id ?? null) })
+    patchLead(s, leadId, { stage: 'terminated', callback_locked: true, next_callback_at: null, callback_notified: false, ...statusPatch(s, leadForLog, stage, STATUS_TERMINATED) })
     logHistory(s, leadId, agentName, 'status_change', 'Auto-terminated after 3 no-answers and callbacks elapsed')
     logActivity(s, { userId: actorInfo.id, userName: agentName, role: actorInfo.role, category: 'call_attempt', action: 'Lead auto-terminated after 3 no-answers', leadId, leadName: leadForLog?.name })
     const supervisorRole = stage === 'direct_sales' ? 'direct_sales_supervisor' : 'telesales_supervisor'
@@ -674,7 +693,7 @@ export async function logCallAttempt(
     patch.next_callback_at = autoCallbackAt
     patch.callback_locked = true
     patch.callback_notified = false
-    patch.status_id = autoStatus(s, STATUS_NO_ANSWER, leadForLog?.status_id ?? null)
+    Object.assign(patch, statusPatch(s, leadForLog, stage, STATUS_NO_ANSWER))
   } else if (outcome === 'answered') {
     // engaged again — clear the auto-callback lock. Both "specific call back time"
     // and "follow up needed" require the agent to book the next call (see UI),
@@ -683,11 +702,11 @@ export async function logCallAttempt(
     patch.next_callback_at = needsBooking ? callbackAt : null
     patch.callback_locked = false
     patch.callback_notified = false
-    if (answeredCategory) patch.status_id = autoStatus(s, CATEGORY_STATUS[answeredCategory], leadForLog?.status_id ?? null)
+    if (answeredCategory) Object.assign(patch, statusPatch(s, leadForLog, stage, CATEGORY_STATUS[answeredCategory]))
   } else if (outcome === 'callback_scheduled') {
     patch.next_callback_at = callbackAt
     patch.callback_notified = false
-    patch.status_id = autoStatus(s, STATUS_FOLLOW_UP, leadForLog?.status_id ?? null)
+    Object.assign(patch, statusPatch(s, leadForLog, stage, STATUS_FOLLOW_UP))
   }
 
   patchLead(s, leadId, patch)
@@ -720,11 +739,13 @@ export async function reassignWithComment(
     patch.ds_sla_due_at = slaDue(SLA_DS_HOURS)
     patch.ds_sla_breached = false
     patch.direct_sales_assigned_at = now()
+    Object.assign(patch, statusPatch(s, lead, 'direct_sales', STATUS_FRESH))
   } else {
     patch.assigned_telesales_agent = toUserId
     patch.stage = 'telesales_assigned'
     patch.tele_sla_due_at = slaDue(SLA_TELE_HOURS)
     patch.tele_sla_breached = false
+    Object.assign(patch, statusPatch(s, lead, 'telesales', STATUS_FRESH))
   }
   // reopening a lead clears the auto-callback lock so the agent can work it
   patch.callback_locked = false
@@ -789,12 +810,16 @@ export async function autoAssignBalanced(
       lead.stage = 'ds_assigned'
       lead.direct_sales_assigned_at = now()
       lead.ds_sla_due_at = slaDue(SLA_DS_HOURS)
+      // DS status stays "Qualified" (the handoff) until the DS agent acts.
+      lead.direct_sales_status_id = autoStatus(s, lead.direct_sales_status_id ?? STATUS_QUALIFIED, STATUS_QUALIFIED)
+      lead.status_id = lead.direct_sales_status_id
     } else {
       lead.assigned_telesales_agent = agent.id
       lead.stage = 'telesales_assigned'
       lead.tele_sla_due_at = slaDue(SLA_TELE_HOURS)
+      lead.telesales_status_id = autoStatus(s, STATUS_FRESH, lead.telesales_status_id)
+      lead.status_id = lead.telesales_status_id
     }
-    lead.status_id = autoStatus(s, STATUS_FRESH, lead.status_id)
     lead.updated_at = now()
     s.history.push({ id: uid(), lead_id: lead.id, at: now(), actor_name: actor, type: 'assignment', detail: `Auto-assigned (checked-in, balanced rounds of ${ROUND_BATCH}, cap ${MAX_LEADS_PER_AGENT}) to ${agent.full_name}` })
   }
@@ -845,9 +870,16 @@ export async function bulkAssign(leadIds: string[], toUserId: string, actor: str
     const lead = s.leads.find((l) => l.id === id)
     if (!lead) continue
     lead.assigned_user_id = toUserId
-    if (isDS) { lead.assigned_direct_sales_agent = toUserId; if (['qualified'].includes(lead.stage)) lead.stage = 'ds_assigned'; lead.direct_sales_assigned_at = now(); lead.ds_sla_due_at = slaDue(SLA_DS_HOURS) }
-    else { lead.assigned_telesales_agent = toUserId; if (lead.stage === 'new') lead.stage = 'telesales_assigned'; lead.tele_sla_due_at = slaDue(SLA_TELE_HOURS) }
-    lead.status_id = autoStatus(s, STATUS_FRESH, lead.status_id)
+    if (isDS) {
+      lead.assigned_direct_sales_agent = toUserId; if (['qualified'].includes(lead.stage)) lead.stage = 'ds_assigned'; lead.direct_sales_assigned_at = now(); lead.ds_sla_due_at = slaDue(SLA_DS_HOURS)
+      // DS status stays "Qualified" (the handoff) until the DS agent acts.
+      lead.direct_sales_status_id = autoStatus(s, lead.direct_sales_status_id ?? STATUS_QUALIFIED, STATUS_QUALIFIED)
+      lead.status_id = lead.direct_sales_status_id
+    } else {
+      lead.assigned_telesales_agent = toUserId; if (lead.stage === 'new') lead.stage = 'telesales_assigned'; lead.tele_sla_due_at = slaDue(SLA_TELE_HOURS)
+      lead.telesales_status_id = autoStatus(s, STATUS_FRESH, lead.telesales_status_id)
+      lead.status_id = lead.telesales_status_id
+    }
     lead.updated_at = now()
     s.history.push({ id: uid(), lead_id: id, at: now(), actor_name: actor, type: 'assignment', detail: `Bulk-assigned to ${target.full_name}` })
     count++
@@ -895,7 +927,7 @@ export async function markApplied(leadId: string, actor: string, actorId?: strin
   const leadForLog = s.leads.find((l) => l.id === leadId)
   patchLead(s, leadId, {
     stage: 'approved', ds_disposition: 'qualified',
-    status_id: autoStatus(s, STATUS_APPLIED, leadForLog?.status_id ?? null),
+    ...statusPatch(s, leadForLog, 'direct_sales', STATUS_APPLIED),
   })
   logHistory(s, leadId, actor, 'status_change', 'Marked Applied — customer confirmed purchase')
   const actorInfo = resolveUserById(s, actorId)

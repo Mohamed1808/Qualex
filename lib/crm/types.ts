@@ -124,7 +124,12 @@ export interface CrmLead {
   channel: LeadChannel
   campaign: string | null
   project_id: string | null
-  status_id: string | null // dynamic sub-status / disposition chip
+  status_id: string | null // "active" sub-status — mirrors the department that owns the current stage
+  // Department-independent statuses: telesales work only touches the telesales
+  // one, direct sales only the DS one, so neither side ever sees the other's
+  // status (except the shared "Qualified" handoff, which sets both).
+  telesales_status_id: string | null
+  direct_sales_status_id: string | null
   // active owner in the CURRENT stage (TS agent, then DS agent)
   assigned_user_id: string | null
   created_at: string
