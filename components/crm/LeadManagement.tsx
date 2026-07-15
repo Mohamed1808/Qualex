@@ -16,6 +16,7 @@ import { TableSkeleton } from './ui/Skeleton'
 import EmptyState from './ui/EmptyState'
 import { DensityToggle, useDensity } from './ui/useDensity'
 import { CHANNELS, CHANNEL_LABELS, CHANNEL_COLORS, SALARY_BRACKETS, DOWN_PAYMENT_BRACKETS, VEHICLE_SOURCES } from '@/lib/crm/constants'
+import { useSession } from '@/lib/crm/session'
 
 const salaryLabel = (v: string | null) => SALARY_BRACKETS.find((x) => x.value === v)?.label ?? (v ?? '')
 const downPaymentLabel = (v: string | null) => DOWN_PAYMENT_BRACKETS.find((x) => x.value === v)?.label ?? (v ?? '')
@@ -24,6 +25,9 @@ const carSourceLabel = (v: string | null) => VEHICLE_SOURCES.find((x) => x.value
 const ACTOR = { id: 'u-admin', name: 'Mohamed Moheb' }
 
 export default function LeadManagement() {
+  const { user } = useSession()
+  // Direct Sales supervisors work leads telesales already brought in — they don't import new ones.
+  const canAddLeads = user.role !== 'direct_sales_supervisor'
   const { density, setDensity, rowPad } = useDensity()
   const [leads, setLeads] = useState<CrmLead[]>([])
   const [statuses, setStatuses] = useState<LeadStatus[]>([])
@@ -98,7 +102,9 @@ export default function LeadManagement() {
         action={
           <div className="flex gap-2">
             <button onClick={exportCsv} className="border border-[#e5e7eb] text-[#4B5563] hover:text-[#111827] hover:bg-[#f3f4f6] text-sm rounded-lg px-4 py-2 transition-colors">⬇ Export CSV</button>
-            <button onClick={() => setAdding(true)} className="bg-[#5757e6] hover:bg-[#4444cc] text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors">+ Add Leads</button>
+            {canAddLeads && (
+              <button onClick={() => setAdding(true)} className="bg-[#5757e6] hover:bg-[#4444cc] text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors">+ Add Leads</button>
+            )}
           </div>
         }
       />
@@ -147,8 +153,8 @@ export default function LeadManagement() {
               ) : leads.length === 0 ? (
                 <tr><td colSpan={10}>
                   <EmptyState icon="❄️" title="No leads found"
-                    hint={hasFilters ? 'Try adjusting or resetting your filters.' : 'Add leads manually or import a CSV to get started.'}
-                    action={hasFilters ? { label: 'Reset filters', onClick: () => { setFilter({}); setSearch('') } } : { label: '+ Add Leads', onClick: () => setAdding(true) }} />
+                    hint={hasFilters ? 'Try adjusting or resetting your filters.' : canAddLeads ? 'Add leads manually or import a CSV to get started.' : 'Leads will appear here once telesales brings them in.'}
+                    action={hasFilters ? { label: 'Reset filters', onClick: () => { setFilter({}); setSearch('') } } : canAddLeads ? { label: '+ Add Leads', onClick: () => setAdding(true) } : undefined} />
                 </td></tr>
               ) : leads.map((l) => {
                 const status = l.status_id ? statusById[l.status_id] : undefined
