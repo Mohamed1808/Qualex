@@ -8,6 +8,7 @@ import PageHeader from './ui/PageHeader'
 import Funnel from './ui/Funnel'
 import { CardSkeleton } from './ui/Skeleton'
 import AgentLeadsDrawer from './AgentLeadsDrawer'
+import StatusDistTable from './ui/StatusDistTable'
 
 const QUALIFIED_PLUS = ['qualified', 'ds_assigned', 'ds_in_progress', 'id_collected', 'approved']
 
@@ -133,15 +134,7 @@ export default function CrmAnalytics({ team }: { team: 'telesales' | 'direct_sal
             </div>
             <div className="bg-white border border-[#e5e7eb] rounded-xl p-5">
               <h3 className="text-sm font-semibold text-[#111827] mb-4">Status Distribution</h3>
-              <div className="flex flex-wrap gap-2">
-                {deptStatuses.map((s) => (
-                  <div key={s.id} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: `${s.color}12` }}>
-                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
-                    <span className="text-xs text-[#374151]">{s.name}</span>
-                    <span className="text-xs font-bold" style={{ color: s.color }}>{statusCounts[s.id] ?? 0}</span>
-                  </div>
-                ))}
-              </div>
+              <StatusDistTable statuses={deptStatuses} counts={statusCounts} />
             </div>
           </div>
 

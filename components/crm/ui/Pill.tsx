@@ -47,6 +47,7 @@ export function StagePill({ stage, className = '' }: { stage: string; className?
 
 const ROLE_COLORS: Record<string, string> = {
   admin: '#7C3AED',
+  management: '#0F766E',
   telesales_supervisor: '#5757e6',
   telesales_agent: '#0EA5E9',
   direct_sales_supervisor: '#14B8A6',

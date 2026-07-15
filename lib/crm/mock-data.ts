@@ -75,6 +75,7 @@ export const SEED_TEAMS: Team[] = [
 
 export const SEED_USERS: CrmUser[] = [
   { id: 'u-admin', full_name: 'Mohamed Moheb', email: 'mmoheb.2002@gmail.com', role: 'admin', title: 'Administrator', team_id: null, is_active: true, created_at: '2024-01-01T09:00:00Z', history: [{ at: '2024-01-01T09:00:00Z', action: 'Account created' }] },
+  { id: 'u-mgmt', full_name: 'Laila Hegazy', email: 'management@drivefinance.eg', role: 'management', title: 'Head of Sales', team_id: null, is_active: true, created_at: '2024-01-01T09:00:00Z', history: [{ at: '2024-01-01T09:00:00Z', action: 'Account created' }] },
   { id: 'u-sara', full_name: 'Sara Mahmoud', email: 'sara@drivefinance.eg', role: 'telesales_supervisor', title: 'Telesales Supervisor', team_id: 'tm-alex', is_active: true, created_at: '2024-01-02T09:00:00Z', history: [{ at: '2024-01-02T09:00:00Z', action: 'Account created' }] },
   { id: 'u-ahmed', full_name: 'Ahmed Hassan', email: 'ahmed@drivefinance.eg', role: 'telesales_agent', title: 'Sales Agent', team_id: 'tm-alex', is_active: true, created_at: '2024-01-03T09:00:00Z', history: [{ at: '2024-01-03T09:00:00Z', action: 'Account created' }] },
   { id: 'u-bahr', full_name: 'Mohamed Bahr', email: 'bahr@drivefinance.eg', role: 'telesales_agent', title: 'Sales Agent', team_id: 'tm-alex', is_active: true, created_at: '2024-01-04T09:00:00Z', history: [{ at: '2024-01-04T09:00:00Z', action: 'Account created' }] },

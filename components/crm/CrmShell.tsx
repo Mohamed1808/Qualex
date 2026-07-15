@@ -8,7 +8,7 @@ import { useSession } from '@/lib/crm/session'
 import AttendanceControls from './AttendanceControls'
 import NotificationBell from './NotificationBell'
 
-type Audience = 'agent' | 'ts_sup' | 'ds_sup' | 'admin'
+type Audience = 'agent' | 'ts_sup' | 'ds_sup' | 'admin' | 'mgmt'
 type NavItem = { href: string; label: string; icon: string; audiences: Audience[] }
 type NavSection = { label: string | null; items: NavItem[] }
 
@@ -18,20 +18,21 @@ const NAV_SECTIONS: NavSection[] = [
     label: null,
     items: [
       { href: '/crm/sales', label: 'My Queue', icon: '🏠', audiences: ['agent'] },
+      { href: '/crm/management', label: 'Management Dashboard', icon: '📈', audiences: ['mgmt'] },
     ],
   },
   {
     label: 'Pipeline',
     items: [
       { href: '/crm/telesales/queue', label: 'Telesales Queue', icon: '📞', audiences: ['ts_sup'] },
-      { href: '/crm/telesales/analytics', label: 'Telesales Analytics', icon: '📊', audiences: ['ts_sup'] },
+      { href: '/crm/telesales/analytics', label: 'Telesales Analytics', icon: '📊', audiences: ['ts_sup', 'mgmt'] },
       { href: '/crm/direct-sales/queue', label: 'Direct Sales Queue', icon: '🤝', audiences: ['ds_sup'] },
-      { href: '/crm/direct-sales/analytics', label: 'Direct Sales Analytics', icon: '📊', audiences: ['ds_sup'] },
-      { href: '/crm/leads', label: 'Lead Management', icon: '❄️', audiences: ['ts_sup', 'ds_sup', 'admin'] },
+      { href: '/crm/direct-sales/analytics', label: 'Direct Sales Analytics', icon: '📊', audiences: ['ds_sup', 'mgmt'] },
+      { href: '/crm/leads', label: 'Lead Management', icon: '❄️', audiences: ['ts_sup', 'ds_sup', 'admin', 'mgmt'] },
       { href: '/crm/assign', label: 'Assign & Distribute', icon: '🎯', audiences: ['ts_sup', 'admin'] },
-      { href: '/crm/attendance', label: 'Attendance', icon: '✅', audiences: ['ts_sup', 'ds_sup', 'admin'] },
+      { href: '/crm/attendance', label: 'Attendance', icon: '✅', audiences: ['ts_sup', 'ds_sup', 'admin', 'mgmt'] },
       { href: '/crm/duplicates', label: 'Duplicates', icon: '🔁', audiences: ['ts_sup', 'ds_sup', 'admin'] },
-      { href: '/crm/activity', label: 'Activity Log', icon: '🕒', audiences: ['ts_sup', 'ds_sup', 'admin'] },
+      { href: '/crm/activity', label: 'Activity Log', icon: '🕒', audiences: ['ts_sup', 'ds_sup', 'admin', 'mgmt'] },
     ],
   },
   {
@@ -47,13 +48,14 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Account',
     items: [
       { href: '/crm/whatsapp', label: 'WhatsApp', icon: '💬', audiences: ['agent', 'ts_sup', 'ds_sup', 'admin'] },
-      { href: '/crm/profile', label: 'Profile', icon: '⚙️', audiences: ['agent', 'ts_sup', 'ds_sup', 'admin'] },
+      { href: '/crm/profile', label: 'Profile', icon: '⚙️', audiences: ['agent', 'ts_sup', 'ds_sup', 'admin', 'mgmt'] },
     ],
   },
 ]
 
 function audienceOf(role: string): Audience {
   if (role === 'admin') return 'admin'
+  if (role === 'management') return 'mgmt'
   if (role === 'telesales_supervisor') return 'ts_sup'
   if (role === 'direct_sales_supervisor') return 'ds_sup'
   return 'agent'
@@ -94,7 +96,7 @@ export default function CrmShell({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-2.5 min-w-0">
           <BrandLogo variant="full" height={26} />
           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#5757e6]/15 text-[#5757e6] flex-shrink-0">
-            {isManager ? (aud === 'admin' ? 'ADMIN' : 'SUP') : 'SALES'}
+            {aud === 'admin' ? 'ADMIN' : aud === 'mgmt' ? 'MGMT' : isManager ? 'SUP' : 'SALES'}
           </span>
         </div>
         <button

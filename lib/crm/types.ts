@@ -45,6 +45,7 @@ export interface Team {
 
 export type UserRole =
   | 'admin'
+  | 'management'
   | 'telesales_supervisor'
   | 'telesales_agent'
   | 'direct_sales_supervisor'

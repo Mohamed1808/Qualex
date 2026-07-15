@@ -14,13 +14,14 @@ import { SEED_USERS } from './mock-data'
 const KEY = 'qualex-crm-current-user'
 
 export function isManager(role: UserRole): boolean {
-  return role === 'admin' || role === 'telesales_supervisor' || role === 'direct_sales_supervisor'
+  return role === 'admin' || role === 'management' || role === 'telesales_supervisor' || role === 'direct_sales_supervisor'
 }
 
 export function roleHome(role: UserRole): string {
   switch (role) {
     case 'telesales_supervisor': return '/crm/telesales/queue'
     case 'direct_sales_supervisor': return '/crm/direct-sales/queue'
+    case 'management': return '/crm/management'
     case 'admin': return '/crm/leads'
     default: return '/crm/sales' // agents
   }

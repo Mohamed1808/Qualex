@@ -12,6 +12,7 @@ import EmptyState from './ui/EmptyState'
 
 const ROLES: { value: UserRole; label: string }[] = [
   { value: 'admin', label: 'Admin' },
+  { value: 'management', label: 'Management' },
   { value: 'telesales_supervisor', label: 'Telesales Supervisor' },
   { value: 'telesales_agent', label: 'Telesales Agent' },
   { value: 'direct_sales_supervisor', label: 'DS Supervisor' },

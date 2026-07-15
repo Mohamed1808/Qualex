@@ -79,7 +79,13 @@ function read(): Store {
       window.localStorage.setItem(KEY, JSON.stringify(s))
       return s
     }
-    return JSON.parse(raw) as Store
+    const parsed = JSON.parse(raw) as Store
+    // Self-heal: pull in any newly-added seed users (e.g. the management role)
+    // without a full reseed, so existing leads/data are preserved.
+    for (const su of SEED_USERS) {
+      if (!parsed.users.some((u) => u.id === su.id)) parsed.users.push(structuredClone(su))
+    }
+    return parsed
   } catch {
     return seed()
   }
