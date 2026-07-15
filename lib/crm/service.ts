@@ -185,6 +185,10 @@ export async function updateTeam(id: string, patch: Partial<Team>): Promise<void
 export async function listUsers(): Promise<CrmUser[]> {
   return delay(read().users)
 }
+/** Synchronous snapshot of all users in the store (seeded + created). Used by the mock session/login. */
+export function getStoreUsers(): CrmUser[] {
+  return read().users
+}
 export async function createUser(input: Omit<CrmUser, 'id' | 'created_at' | 'history'>): Promise<CrmUser> {
   const s = read()
   const user: CrmUser = { ...input, id: uid(), created_at: now(), history: [{ at: now(), action: 'Account created' }] }

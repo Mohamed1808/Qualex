@@ -9,7 +9,7 @@
 
 import { useEffect, useState } from 'react'
 import type { CrmUser, UserRole } from './types'
-import { SEED_USERS } from './mock-data'
+import { getStoreUsers } from './service'
 
 const KEY = 'qualex-crm-current-user'
 
@@ -39,9 +39,10 @@ export function setCurrentUserId(id: string | null) {
   window.dispatchEvent(new Event('crm-session-change'))
 }
 
-/** Mock login: match email (case-insensitive) among active seed users. Any password. */
+/** Mock login: match email (case-insensitive) among active users in the store
+ *  (seeded + any created in the admin portal). Any password. */
 export function login(email: string): CrmUser | null {
-  const user = SEED_USERS.find((u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.is_active)
+  const user = getStoreUsers().find((u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.is_active)
   if (!user) return null
   setCurrentUserId(user.id)
   return user
@@ -65,7 +66,7 @@ export function useSession() {
     return () => window.removeEventListener('crm-session-change', onChange)
   }, [])
 
-  const users: CrmUser[] = SEED_USERS
+  const users: CrmUser[] = getStoreUsers()
   const user = users.find((u) => u.id === id) ?? users[0]
   return {
     user,
